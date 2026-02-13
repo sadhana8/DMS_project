@@ -23,7 +23,7 @@ public class DocumentService {
         this.documentRepository = documentRepository;
     }
 
-    // Upload new document
+    
     public Document uploadDocument(MultipartFile file, String title, String description) throws IOException {
         Path path = Paths.get(uploadDir).toAbsolutePath().normalize();
         Files.createDirectories(path);
