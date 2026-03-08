@@ -2,35 +2,30 @@ package com.dms.controller;
 
 import com.dms.models.Document;
 import com.dms.services.DocumentService;
-import com.dms.dao.DocumentRepository;
-import org.springframework.http.*;
-import org.springframework.web.multipart.MultipartFile;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.core.io.Resource;
+import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.List;
 
 @RestController
 @RequestMapping("/api/documents")
-@CrossOrigin(origins = "*") // allows frontend or Postman to access this API
+@CrossOrigin(origins = "*")
 public class DocumentController {
 
     private final DocumentService documentService;
-    private final DocumentRepository documentRepository;
 
     @Autowired
-    public DocumentController(DocumentService documentService, DocumentRepository documentRepository) {
+    public DocumentController(DocumentService documentService) {
         this.documentService = documentService;
-        this.documentRepository = documentRepository;
     }
 
-    // 📤 Upload Document with Metadata
+    // 📤 Upload document
     @PostMapping("/upload")
     public ResponseEntity<Document> uploadDocument(
             @RequestParam("file") MultipartFile file,
@@ -39,88 +34,105 @@ public class DocumentController {
             @RequestParam("uploadedBy") String uploadedBy,
             @RequestParam("category") String category
     ) throws IOException {
-        Document savedDoc = documentService.uploadDocument(file, title, description, uploadedBy, category);
+
+        Document savedDoc = documentService.uploadDocument(
+                file, title, description, uploadedBy, category);
+
         return new ResponseEntity<>(savedDoc, HttpStatus.CREATED);
     }
 
-    // 📜 Get All Documents
+    // 📜 Get all documents
     @GetMapping
     public List<Document> getAllDocuments() {
         return documentService.getAllDocuments();
     }
 
-    // 🔍 Get Document by ID
+    // 🔍 Get document by ID
     @GetMapping("/{id}")
     public ResponseEntity<Document> getDocumentById(@PathVariable Long id) {
-        Document doc = documentService.getDocument(id);
-        return (doc != null) ? ResponseEntity.ok(doc) : ResponseEntity.notFound().build();
-    }
 
-    // ⬇️ Download a Document
-    @GetMapping("/download/{id}")
-    public ResponseEntity<Resource> downloadFile(@PathVariable Long id) throws IOException {
         Document doc = documentService.getDocument(id);
+
         if (doc == null) {
             return ResponseEntity.notFound().build();
         }
 
-        Path path = Paths.get(doc.getFilePath());
-        ByteArrayResource resource = new ByteArrayResource(Files.readAllBytes(path));
+        return ResponseEntity.ok(doc);
+    }
+
+    // ⬇️ Download file
+    @GetMapping("/download/{id}")
+    public ResponseEntity<Resource> downloadFile(@PathVariable Long id) throws IOException {
+
+        Document doc = documentService.getDocument(id);
+
+        if (doc == null) {
+            return ResponseEntity.notFound().build();
+        }
+
+        byte[] data = documentService.downloadFile(id);
+
+        ByteArrayResource resource = new ByteArrayResource(data);
 
         return ResponseEntity.ok()
                 .contentType(MediaType.parseMediaType(doc.getFileType()))
-                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + doc.getFileName() + "\"")
-                .header("X-Uploaded-By", doc.getUploadedBy())
-                .header("X-File-Size", String.valueOf(doc.getFileSize()))
-                .header("X-Category", doc.getCategory())
+                .header(HttpHeaders.CONTENT_DISPOSITION,
+                        "attachment; filename=\"" + doc.getFileName() + "\"")
                 .body(resource);
     }
 
-    // ✏️ Update Document Metadata
+    // ✏️ Update metadata
     @PutMapping("/{id}")
     public ResponseEntity<Document> updateDocumentMetadata(
             @PathVariable Long id,
             @RequestParam String title,
-            @RequestParam String description
-    ) {
+            @RequestParam String description) {
+
         Document updated = documentService.updateMetadata(id, title, description);
-        return (updated != null) ? ResponseEntity.ok(updated) : ResponseEntity.notFound().build();
+
+        if (updated == null) {
+            return ResponseEntity.notFound().build();
+        }
+
+        return ResponseEntity.ok(updated);
     }
 
-    // 🚫 Deprecate Document (mark as outdated)
+    // 🚫 Deprecate document
     @PutMapping("/deprecate/{id}")
     public ResponseEntity<String> deprecateDocument(@PathVariable Long id) {
+
         boolean success = documentService.deprecateDocument(id);
-        return success
-                ? ResponseEntity.ok("Document deprecated successfully")
-                : ResponseEntity.notFound().build();
+
+        if (!success) {
+            return ResponseEntity.notFound().build();
+        }
+
+        return ResponseEntity.ok("Document deprecated successfully");
     }
 
-    // 🔍 Filter by Category
+    // 🔍 Filter by category
     @GetMapping("/filter/category")
     public List<Document> filterByCategory(@RequestParam String category) {
-        return documentRepository.findByCategory(category);
+        return documentService.getByCategory(category);
     }
 
-    // 🔍 Filter by Uploader
+    // 🔍 Filter by uploader
     @GetMapping("/filter/uploader")
     public List<Document> filterByUploader(@RequestParam String name) {
-        return documentRepository.findByUploadedBy(name);
+        return documentService.getByUploader(name);
     }
 
-    // 📊 Analytics: Documents per Uploader
+    // 📊 Analytics
     @GetMapping("/analytics/uploader")
     public List<String> getStatsByUploader() {
         return documentService.getDocumentStatsByUploader();
     }
 
-    // 📊 Analytics: Documents per Category
     @GetMapping("/analytics/category")
     public List<String> getStatsByCategory() {
         return documentService.getDocumentStatsByCategory();
     }
 
-    // 📊 Analytics: Total Storage per Uploader
     @GetMapping("/analytics/storage")
     public List<String> getTotalStorageByUploader() {
         return documentService.getTotalFileSizeByUploader();
