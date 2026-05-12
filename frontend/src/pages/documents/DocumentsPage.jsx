@@ -69,9 +69,19 @@ export default function DocumentsPage() {
           <p className="page-subtitle">{total} document{total !== 1 ? 's' : ''} total</p>
         </div>
         {canUpload() && (
-          <button onClick={() => setUploadOpen(true)} className="btn-primary gap-2">
-            <HiOutlineUpload className="w-4 h-4" /> Upload
-          </button>
+          <div className="flex items-center gap-2">
+            <Link to="/documents/search/advanced" className="btn-secondary gap-2">
+              <HiOutlineAdjustments className="w-4 h-4" /> Advanced
+            </Link>
+            <button onClick={() => setUploadOpen(true)} className="btn-primary gap-2">
+              <HiOutlineUpload className="w-4 h-4" /> Upload
+            </button>
+          </div>
+        )}
+        {!canUpload() && (
+          <Link to="/documents/search/advanced" className="btn-secondary gap-2">
+            <HiOutlineAdjustments className="w-4 h-4" /> Advanced search
+          </Link>
         )}
       </div>
 

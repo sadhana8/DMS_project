@@ -39,6 +39,10 @@ export function AuthProvider({ children }) {
   const login = async (credentials) => {
     const data = await authApi.login(credentials)
     saveSession(data)
+    if (data.mustChangePassword) {
+      // Don't show "Welcome back" — push them to the password-change screen instead
+      return { ...data, mustChangePassword: true }
+    }
     toast.success(`Welcome back, ${data.user.firstName}!`)
     return data
   }
@@ -78,10 +82,22 @@ export function AuthProvider({ children }) {
   const isHr          = ()     => hasRole('ROLE_HR')      || isAdmin()
   const isAccount     = ()     => hasRole('ROLE_ACCOUNT') || isHr()
   const isEmployee    = ()     => hasRole('ROLE_EMPLOYEE') || isAccount()
-  const canUpload     = ()     => isAccount()
+
+  /* Specialist roles — these are standalone, not part of the privilege ladder */
+  const isManager     = ()     => hasRole('ROLE_MANAGER') || isHr()
+  const isFinance     = ()     => hasRole('ROLE_FINANCE') || hasRole('ROLE_ACCOUNT') || isAdmin()
+  const isLegal       = ()     => hasRole('ROLE_LEGAL')   || isAdmin()
+  const isReviewer    = ()     => hasRole('ROLE_REVIEWER') || isAdmin()
+
+  /* Pure role checks (no privilege escalation) — used for dashboard variant selection */
+  const hasManagerRole  = () => hasRole('ROLE_MANAGER')
+  const hasFinanceRole  = () => hasRole('ROLE_FINANCE')
+  const hasLegalRole    = () => hasRole('ROLE_LEGAL')
+  const hasReviewerRole = () => hasRole('ROLE_REVIEWER')
+
+  const canUpload      = ()    => isAccount() || hasManagerRole() || hasFinanceRole() || hasLegalRole()
   const canManageUsers = ()    => isAdmin()
   // Backward-compat aliases — older components may still call these.
-  const isManager     = isHr
   const isEditor      = isAccount
 
   return (
@@ -90,6 +106,8 @@ export function AuthProvider({ children }) {
       login, register, logout, refreshUser,
       hasRole, isAdmin, isHr, isAccount, isEmployee,
       isManager, isEditor,                   // legacy aliases
+      isFinance, isLegal, isReviewer,        // specialist roles
+      hasManagerRole, hasFinanceRole, hasLegalRole, hasReviewerRole, // pure checks
       canUpload, canManageUsers,
       isAuthenticated: !!user,
     }}>

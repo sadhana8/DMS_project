@@ -42,19 +42,35 @@ public class DashboardServiceImpl {
 
     // ── Stats (role-aware) ──────────────────────────────────────────────
     public DashboardStatsResponse getStats(String email) {
-        User me = userRepository.findByEmail(email).orElseThrow();
-        RoleName top = topRole(me);
-        LocalDateTime startOfMonth = LocalDateTime.now().withDayOfMonth(1)
-                .withHour(0).withMinute(0).withSecond(0).withNano(0);
+        try {
+            User me = userRepository.findByEmail(email).orElseThrow();
+            RoleName top = topRole(me);
+            LocalDateTime startOfMonth = LocalDateTime.now().withDayOfMonth(1)
+                    .withHour(0).withMinute(0).withSecond(0).withNano(0);
 
-        return switch (top) {
-            case ROLE_ADMIN, ROLE_HR ->
-                systemStats(startOfMonth);
-            case ROLE_ACCOUNT ->
-                editorStats(me, startOfMonth);
-            case ROLE_EMPLOYEE ->
-                viewerStats(me);
-        };
+            // Default to viewer/employee view if role can't be determined
+            if (top == null) {
+                log.warn("Dashboard: user {} has no recognised role, defaulting to employee view", email);
+                return viewerStats(me);
+            }
+            return switch (top) {
+                case ROLE_ADMIN, ROLE_HR ->
+                    systemStats(startOfMonth);
+                case ROLE_ACCOUNT, ROLE_MANAGER, ROLE_FINANCE, ROLE_LEGAL ->
+                    editorStats(me, startOfMonth);
+                case ROLE_EMPLOYEE, ROLE_REVIEWER ->
+                    viewerStats(me);
+            };
+        } catch (Exception e) {
+            log.warn("Dashboard getStats failed entirely: {}", e.toString());
+            // Return zeros rather than 500 so the UI renders something
+            return DashboardStatsResponse.builder()
+                    .totalDocuments(0).archivedDocuments(0).newThisMonth(0)
+                    .totalUsers(0).activeUsers(0)
+                    .storageUsed(0).storageLimit(STORAGE_LIMIT)
+                    .downloadsToday(0)
+                    .build();
+        }
     }
 
     private DashboardStatsResponse systemStats(LocalDateTime startOfMonth) {
@@ -193,7 +209,7 @@ public class DashboardServiceImpl {
     private long downloadsToday() {
         return safeCall(() -> {
             LocalDateTime startOfDay = LocalDateTime.now().withHour(0).withMinute(0).withSecond(0).withNano(0);
-            return auditLogRepository.search(null, AuditLog.Action.DOCUMENT_DOWNLOAD,
+            return auditLogRepository.search(null, AuditLog.Action.DOCUMENT_DOWNLOAD.name(),
                     null, startOfDay, null, PageRequest.of(0, 1)).getTotalElements();
         });
     }
@@ -227,17 +243,23 @@ public class DashboardServiceImpl {
      * Picks the highest-privilege role on the user, defaulting to VIEWER.
      */
     private RoleName topRole(User user) {
+        if (user == null || user.getRoles() == null || user.getRoles().isEmpty()) {
+            return null;
+        }
         Set<RoleName> names = new HashSet<>();
-        user.getRoles().forEach(r -> names.add(r.getName()));
-        if (names.contains(RoleName.ROLE_ADMIN)) {
-            return RoleName.ROLE_ADMIN;
-        }
-        if (names.contains(RoleName.ROLE_HR)) {
-            return RoleName.ROLE_HR;
-        }
-        if (names.contains(RoleName.ROLE_ACCOUNT)) {
-            return RoleName.ROLE_ACCOUNT;
-        }
-        return RoleName.ROLE_EMPLOYEE;
+        user.getRoles().forEach(r -> {
+            if (r != null && r.getName() != null) {
+                names.add(r.getName());
+        
+            }});
+        if (names.contains(RoleName.ROLE_ADMIN))    return RoleName.ROLE_ADMIN;
+        if (names.contains(RoleName.ROLE_HR))       return RoleName.ROLE_HR;
+        if (names.contains(RoleName.ROLE_ACCOUNT))  return RoleName.ROLE_ACCOUNT;
+        if (names.contains(RoleName.ROLE_MANAGER))  return RoleName.ROLE_MANAGER;
+        if (names.contains(RoleName.ROLE_FINANCE))  return RoleName.ROLE_FINANCE;
+        if (names.contains(RoleName.ROLE_LEGAL))    return RoleName.ROLE_LEGAL;
+        if (names.contains(RoleName.ROLE_REVIEWER)) return RoleName.ROLE_REVIEWER;
+        if (names.contains(RoleName.ROLE_EMPLOYEE)) return RoleName.ROLE_EMPLOYEE;
+        return null;
     }
 }

@@ -19,5 +19,30 @@ public enum RoleName {
     ROLE_ADMIN,
     ROLE_HR,
     ROLE_ACCOUNT,
-    ROLE_EMPLOYEE
+    ROLE_EMPLOYEE,
+
+    /**
+     * Department / Team Manager. Can view team members, manage department
+     * documents, and initiate approval requests. Cannot access system-level
+     * admin pages.
+     */
+    ROLE_MANAGER,
+
+    /**
+     * Finance team member. Focused on financial documents: invoices, bills,
+     * expense reports. Can upload and share within the finance domain.
+     */
+    ROLE_FINANCE,
+
+    /**
+     * Legal team member. Handles contracts, policies, and compliance
+     * documents. Read-write on legal-category files.
+     */
+    ROLE_LEGAL,
+
+    /**
+     * Reviewer / Approver. Can review and approve documents assigned to them.
+     * Cannot upload, delete, or manage users.
+     */
+    ROLE_REVIEWER
 }

@@ -8,10 +8,11 @@ import {
   HiOutlineHome, HiOutlineDocumentText, HiOutlineUsers,
   HiOutlineShieldCheck, HiOutlineBell, HiOutlineCog,
   HiOutlineChartBar, HiOutlineUserGroup, HiOutlineViewGrid,
+  HiOutlineKey, HiOutlineSearch,
 } from 'react-icons/hi'
 
 export default function Sidebar({ open, onClose }) {
-  const { user, isAdmin, isManager, isEditor, logout } = useAuth()
+  const { user, isAdmin, isManager, isEditor, isFinance, isLegal, isReviewer, hasManagerRole, logout } = useAuth()
 
   const { data: pendingApprovals = 0 } = useQuery({
     queryKey: ['approval-count'],
@@ -19,6 +20,14 @@ export default function Sidebar({ open, onClose }) {
     enabled:  isAdmin(),
     refetchInterval: 60_000,
   })
+
+  const { data: changeReqsCount } = useQuery({
+    queryKey: ['change-requests-count'],
+    queryFn:  () => import('@/api/profileChanges').then(m => m.profileChangesApi.pendingCount()),
+    enabled:  isManager() || isAdmin(),
+    refetchInterval: 60_000,
+  })
+  const pendingChangeRequests = changeReqsCount?.pending ?? 0
 
   const { data: unreadNotif = 0 } = useQuery({
     queryKey: ['notif-count'],
@@ -29,11 +38,18 @@ export default function Sidebar({ open, onClose }) {
   const navItems = [
     { to: '/dashboard',  label: 'Dashboard',     icon: HiOutlineHome,         show: true },
     { to: '/documents',  label: 'Documents',      icon: HiOutlineDocumentText, show: true },
+    { to: '/documents/search/advanced', label: 'Advanced search', icon: HiOutlineSearch, show: true },
+    // HR/Manager can see users directory
     { to: '/users',      label: 'Users',          icon: HiOutlineUsers,        show: isManager() || isAdmin() },
+    { to: '/hr/change-requests', label: 'Change requests', icon: HiOutlineDocumentText,
+      show: isManager() || isAdmin(), badge: pendingChangeRequests },
+    // Admin-only items
     { to: '/approvals',  label: 'Approvals',      icon: HiOutlineUserGroup,    show: isAdmin(), badge: pendingApprovals },
+    { to: '/admin/roles', label: 'Roles',         icon: HiOutlineKey,          show: isAdmin() },
     { to: '/audit',      label: 'Audit trail',    icon: HiOutlineShieldCheck,  show: isAdmin() },
-    { to: '/notifications', label: 'Notifications', icon: HiOutlineBell,       show: true, badge: unreadNotif },
     { to: '/settings',   label: 'Settings',       icon: HiOutlineCog,          show: isAdmin() },
+    // Notifications — all users
+    { to: '/notifications', label: 'Notifications', icon: HiOutlineBell,       show: true, badge: unreadNotif },
   ].filter(i => i.show)
 
   const initials = user
@@ -58,8 +74,8 @@ export default function Sidebar({ open, onClose }) {
             D
           </div>
           <div>
-            <p className="font-semibold text-surface-900 text-sm">DMS</p>
-            <p className="text-xs text-surface-400">Document Management System</p>
+            <p className="font-semibold text-surface-900 text-sm">DocVault</p>
+            <p className="text-xs text-surface-400">Document Management</p>
           </div>
         </div>
 

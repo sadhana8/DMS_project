@@ -7,7 +7,8 @@ import { notificationsApi } from '@/api/notifications'
 import Spinner from '@/components/common/Spinner'
 import toast from 'react-hot-toast'
 import clsx from 'clsx'
-import { HiOutlineUser, HiOutlineShieldCheck, HiOutlineBell, HiOutlineEye, HiOutlineEyeOff } from 'react-icons/hi'
+import { HiOutlineUser, HiOutlineShieldCheck, HiOutlineBell, HiOutlineEye, HiOutlineEyeOff, HiOutlineLogout, HiOutlineLockClosed } from 'react-icons/hi'
+import TwoFactorPage from '@/pages/auth/TwoFactorPage'
 
 function Toggle({ checked, onChange }) {
   return (
@@ -24,6 +25,22 @@ export default function ProfilePage() {
   const [tab,     setTab]     = useState('profile')
   const [showOld, setShowOld] = useState(false)
   const [showNew, setShowNew] = useState(false)
+
+  // Resignation
+  const [resignReason,   setResignReason]   = useState('')
+  const [resignBusy,     setResignBusy]     = useState(false)
+
+  const onResign = async () => {
+    if (!confirm('Submit resignation? Your access will end at the end of this month.')) return
+    setResignBusy(true)
+    try {
+      const r = await usersApi.resignSelf({ reason: resignReason || null })
+      toast.success(r?.message || 'Resignation recorded')
+      await refreshUser()
+      setResignReason('')
+    } catch (e) { toast.error(e?.response?.data?.message || 'Failed to record resignation') }
+    finally { setResignBusy(false) }
+  }
 
   const profileForm = useForm({ defaultValues: { firstName: user?.firstName ?? '', lastName: user?.lastName ?? '', phoneNumber: user?.phoneNumber ?? '' } })
   const pwForm = useForm()
@@ -53,7 +70,9 @@ export default function ProfilePage() {
   const TABS = [
     { key: 'profile',       label: 'Profile',       icon: HiOutlineUser },
     { key: 'security',      label: 'Security',       icon: HiOutlineShieldCheck },
+    { key: 'twofactor',     label: 'Two-factor',     icon: HiOutlineLockClosed },
     { key: 'notifications', label: 'Notifications',  icon: HiOutlineBell },
+    { key: 'resign',        label: 'Resignation',    icon: HiOutlineLogout },
   ]
 
   const initials = user ? `${user.firstName?.charAt(0) ?? ''}${user.lastName?.charAt(0) ?? ''}`.toUpperCase() : '?'
@@ -158,6 +177,11 @@ export default function ProfilePage() {
         </div>
       )}
 
+      {/* Two-factor tab */}
+      {tab === 'twofactor' && (
+        <TwoFactorPage />
+      )}
+
       {/* Notifications tab */}
       {tab === 'notifications' && (
         <div className="card overflow-hidden">
@@ -174,6 +198,54 @@ export default function ProfilePage() {
               <div className="w-14 flex justify-center"><Toggle checked={s.email ?? true} onChange={v => toggleNotif(s.type, 'email', v)} /></div>
             </div>
           ))}
+        </div>
+      )}
+      {/* Resignation tab */}
+      {tab === 'resign' && (
+        <div className="card p-6">
+          {user?.resignationEffectiveDate ? (
+            <div>
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-9 h-9 rounded-lg bg-amber-100 text-amber-700 flex items-center justify-center">
+                  <HiOutlineLogout className="w-5 h-5" />
+                </div>
+                <h3 className="text-base font-semibold">Resignation already submitted</h3>
+              </div>
+              <p className="text-sm text-surface-600 mb-2">
+                Your resignation was recorded on{' '}
+                <strong>{new Date(user.resignationDate).toLocaleString()}</strong>.
+              </p>
+              <p className="text-sm text-surface-600">
+                Your DocVault access will end at end of day on{' '}
+                <strong>{new Date(user.resignationEffectiveDate).toLocaleDateString()}</strong>.
+              </p>
+              <p className="text-xs text-surface-400 mt-3">
+                Need to revoke this? Contact an administrator.
+              </p>
+            </div>
+          ) : (
+            <div>
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-9 h-9 rounded-lg bg-amber-100 text-amber-700 flex items-center justify-center">
+                  <HiOutlineLogout className="w-5 h-5" />
+                </div>
+                <h3 className="text-base font-semibold">Submit resignation</h3>
+              </div>
+              <p className="text-sm text-surface-500 mb-4">
+                Once submitted, your DocVault access will be revoked at end of day on
+                the last day of the current month. Make sure you've downloaded any
+                personal documents before then.
+              </p>
+              <label className="label">Reason <span className="text-surface-400 font-normal">(optional)</span></label>
+              <textarea value={resignReason} onChange={e => setResignReason(e.target.value)}
+                placeholder="Anything you'd like HR to know"
+                rows={3} className="input mb-4" />
+              <button onClick={onResign} disabled={resignBusy}
+                className="btn bg-amber-600 text-white hover:bg-amber-700 shadow-sm">
+                {resignBusy ? 'Submitting…' : 'Submit resignation'}
+              </button>
+            </div>
+          )}
         </div>
       )}
     </div>

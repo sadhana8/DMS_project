@@ -54,4 +54,12 @@ public interface UserRepository extends JpaRepository<User, Long> {
      */
     @Query("SELECT u FROM User u JOIN u.roles r WHERE r.name = :role AND u.isActive = true")
     java.util.List<User> findAllActiveByRole(@Param("role") com.dms.entity.RoleName role);
+
+    /**
+     * Resigned users whose effective date has passed but who are still active.
+     * Used by the resignation scheduler to revoke access.
+     */
+    @Query("SELECT u FROM User u WHERE u.resignationEffectiveDate IS NOT NULL " +
+           "AND u.resignationEffectiveDate <= :now AND u.isActive = true")
+    java.util.List<User> findResignedAndDue(@Param("now") java.time.LocalDateTime now);
 }

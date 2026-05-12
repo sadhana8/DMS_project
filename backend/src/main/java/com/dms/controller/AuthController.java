@@ -18,7 +18,7 @@ import org.springframework.web.bind.annotation.*;
 public class AuthController {
 
     private final AuthServiceImpl authService;
-    private final UserRepository  userRepository;
+    private final UserRepository userRepository;
 
     @PostMapping("/login")
     public ResponseEntity<AuthResponse> login(@Valid @RequestBody LoginRequest request) {
@@ -26,9 +26,10 @@ public class AuthController {
     }
 
     /**
-     * Register a new user. If {@code require_admin_approval} is enabled in system
-     * settings, returns an {@link ApiResponse} (no tokens) and the user cannot
-     * log in until an admin approves. Otherwise returns a full {@link AuthResponse}.
+     * Register a new user. If {@code require_admin_approval} is enabled in
+     * system settings, returns an {@link ApiResponse} (no tokens) and the user
+     * cannot log in until an admin approves. Otherwise returns a full
+     * {@link AuthResponse}.
      */
     @PostMapping("/register")
     public ResponseEntity<?> register(@Valid @RequestBody RegisterRequest request) {
@@ -73,5 +74,18 @@ public class AuthController {
             @Valid @RequestBody ChangePasswordRequest request) {
         authService.changePassword(userDetails.getUsername(), request);
         return ResponseEntity.ok(ApiResponse.ok("Password changed successfully"));
+    }
+
+    /**
+     * First-login password change for admin-created accounts. Doesn't require
+     * the current password (a temp one was emailed). Clears the
+     * {@code mustChangePassword} flag.
+     */
+    @PutMapping("/first-login-password-change")
+    public ResponseEntity<ApiResponse> firstLoginPasswordChange(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @Valid @RequestBody com.dms.dto.request.FirstLoginPasswordChangeRequest request) {
+        authService.firstLoginPasswordChange(userDetails.getUsername(), request);
+        return ResponseEntity.ok(ApiResponse.ok("Password changed. Please log in again."));
     }
 }

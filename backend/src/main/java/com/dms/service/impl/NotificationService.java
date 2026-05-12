@@ -95,19 +95,35 @@ public class NotificationService {
 
     /**
      * Fan-out: create the same notification for every active admin. Used for
-     * "new user needs approval" alerts. Skips admins who have opted out of this
-     * notification type via their settings.
+     * "new user needs approval" alerts.
      */
     @Transactional
     public void notifyAllAdmins(NotificationType type, String title, String message, String link) {
-        var admins = userRepo.findAllActiveByRole(com.dms.entity.RoleName.ROLE_ADMIN);
-        for (User admin : admins) {
-            if (!isInAppEnabled(admin.getId(), type)) {
-                continue;
+        notifyAllByRoles(java.util.List.of(com.dms.entity.RoleName.ROLE_ADMIN), type, title, message, link);
+    }
+
+    /**
+     * Fan-out to every active user holding any of the given roles. Used for
+     * cross-role alerts (e.g. profile-change requests go to both HR and Admin).
+     * Skips users who have opted out of this notification type. Deduplicates
+     * users who hold more than one of the listed roles.
+     */
+    @Transactional
+    public void notifyAllByRoles(java.util.List<com.dms.entity.RoleName> roles,
+            NotificationType type, String title, String message, String link) {
+        java.util.Set<Long> seen = new java.util.HashSet<>();
+        for (com.dms.entity.RoleName role : roles) {
+            for (User u : userRepo.findAllActiveByRole(role)) {
+                if (!seen.add(u.getId())) {
+                    continue;
+                }
+                if (!isInAppEnabled(u.getId(), type)) {
+                    continue;
+                }
+                notifRepo.save(Notification.builder()
+                        .recipient(u).type(type)
+                        .title(title).message(message).link(link).build());
             }
-            notifRepo.save(Notification.builder()
-                    .recipient(admin).type(type)
-                    .title(title).message(message).link(link).build());
         }
     }
 
@@ -116,14 +132,17 @@ public class NotificationService {
             LocalDateTime from, LocalDateTime to,
             int page, int size) {
         User user = userRepo.findByEmail(email).orElseThrow();
-        NotificationType typeEnum = null;
+        // Validate the type string matches a real enum value, but pass it through as String
+        // so the native query can do explicit type casting (avoids Postgres null-bind issues).
+        String typeStr = null;
         if (type != null && !type.isBlank()) {
             try {
-                typeEnum = NotificationType.valueOf(type);
+                typeStr = NotificationType.valueOf(type).name();
             } catch (Exception ignored) {
+                // Invalid enum value — treat as no filter
             }
         }
-        return notifRepo.findFiltered(user.getId(), typeEnum, isRead, from, to,
+        return notifRepo.findFiltered(user.getId(), typeStr, isRead, from, to,
                 PageRequest.of(page, size)).map(this::toResponse);
     }
 

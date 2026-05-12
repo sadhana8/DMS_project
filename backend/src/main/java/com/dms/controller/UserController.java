@@ -6,6 +6,7 @@ import com.dms.exception.ResourceNotFoundException;
 import com.dms.repository.UserRepository;
 import com.dms.service.impl.AuthServiceImpl;
 import com.dms.service.impl.UserServiceImpl;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
@@ -141,5 +142,78 @@ public class UserController {
             @AuthenticationPrincipal UserDetails ud) {
         userService.deleteUser(id, ud.getUsername());
         return ResponseEntity.ok(ApiResponse.ok("User permanently deleted"));
+    }
+
+    /**
+     * Admin creates a new user. Generates a random password, sends it via email,
+     * and forces the new user to change it on first login.
+     */
+    @PostMapping("/admin-create")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<UserResponse> adminCreate(
+            @Valid @RequestBody com.dms.dto.request.AdminCreateUserRequest req,
+            @AuthenticationPrincipal UserDetails ud) {
+        return ResponseEntity.status(org.springframework.http.HttpStatus.CREATED)
+                .body(userService.adminCreate(req, ud.getUsername()));
+    }
+
+    /**
+     * Suspend a user — immediate access revocation + force logout.
+     * Unlike terminate, this sets no termination timestamp and sends no
+     * termination email. It is fully reversible via /restore.
+     * Reason is required.
+     */
+    @PostMapping("/{id}/suspend")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ApiResponse> suspend(
+            @PathVariable Long id,
+            @Valid @RequestBody com.dms.dto.request.TerminationRequest req,
+            @AuthenticationPrincipal UserDetails ud) {
+        userService.suspend(id, req.getReason(), ud.getUsername());
+        return ResponseEntity.ok(ApiResponse.ok("User suspended — login blocked and sessions revoked"));
+    }
+
+    /**
+     * Terminate a user — immediate access revocation. Reason is required.
+     */
+    @PostMapping("/{id}/terminate")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ApiResponse> terminate(
+            @PathVariable Long id,
+            @Valid @RequestBody com.dms.dto.request.TerminationRequest req,
+            @AuthenticationPrincipal UserDetails ud) {
+        userService.terminate(id, req.getReason(), ud.getUsername());
+        return ResponseEntity.ok(ApiResponse.ok("User terminated, access revoked"));
+    }
+
+    /**
+     * Employee resigns themselves. Effective date defaults to last day of the
+     * current month at 23:59:59. Body may include a reason.
+     */
+    @PostMapping("/me/resign")
+    public ResponseEntity<ApiResponse> resignSelf(
+            @RequestBody(required = false) com.dms.dto.request.ResignationRequest req,
+            @AuthenticationPrincipal UserDetails ud) {
+        var user = userRepository.findByEmail(ud.getUsername())
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+        userService.resign(user.getId(),
+                req != null ? req : new com.dms.dto.request.ResignationRequest(),
+                ud.getUsername());
+        return ResponseEntity.ok(ApiResponse.ok(
+            "Resignation recorded. Your access will be revoked at end of the resignation period."));
+    }
+
+    /**
+     * Admin records a resignation on behalf of an employee. May override the
+     * effective date.
+     */
+    @PostMapping("/{id}/resign")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ApiResponse> resignOnBehalf(
+            @PathVariable Long id,
+            @Valid @RequestBody com.dms.dto.request.ResignationRequest req,
+            @AuthenticationPrincipal UserDetails ud) {
+        userService.resign(id, req, ud.getUsername());
+        return ResponseEntity.ok(ApiResponse.ok("Resignation recorded"));
     }
 }

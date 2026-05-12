@@ -16,11 +16,14 @@ import java.util.*;
 @Slf4j
 public class GlobalExceptionHandler {
 
-    record ErrorResponse(int status, String error, String message, LocalDateTime timestamp, Map<String, String> fieldErrors) {}
+    record ErrorResponse(int status, String error, String message, LocalDateTime timestamp, Map<String, String> fieldErrors) {
+
+    }
 
     private ErrorResponse build(int status, String error, String message) {
         return new ErrorResponse(status, error, message, LocalDateTime.now(), null);
     }
+
     private ErrorResponse build(int status, String error, String message, Map<String, String> fieldErrors) {
         return new ErrorResponse(status, error, message, LocalDateTime.now(), fieldErrors);
     }
@@ -35,6 +38,12 @@ public class GlobalExceptionHandler {
     @ResponseStatus(HttpStatus.CONFLICT)
     public ErrorResponse handleDuplicate(DuplicateResourceException e) {
         return build(409, "Conflict", e.getMessage());
+    }
+
+    @ExceptionHandler(BadRequestException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public ErrorResponse handleBadRequest(BadRequestException e) {
+        return build(400, "Bad Request", e.getMessage());
     }
 
     @ExceptionHandler(InvalidTokenException.class)

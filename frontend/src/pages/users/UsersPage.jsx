@@ -11,7 +11,7 @@ import clsx from 'clsx'
 import {
   HiOutlineSearch, HiOutlineUsers, HiOutlineShieldCheck,
   HiOutlineBan, HiOutlineCheckCircle, HiOutlineArchive,
-  HiOutlineRefresh, HiOutlineFilter,
+  HiOutlineRefresh, HiOutlineFilter, HiOutlineUserAdd, HiOutlineX,
 } from 'react-icons/hi'
 
 const ALL_ROLES = ['ROLE_ADMIN','ROLE_HR','ROLE_ACCOUNT','ROLE_EMPLOYEE']
@@ -27,6 +27,22 @@ export default function UsersPage() {
   const [deprReason,     setDeprReason]     = useState('')
   const [deprLoading,    setDeprLoading]    = useState(false)
   const [selectedRoles,  setSelectedRoles]  = useState([])
+
+  // Admin create
+  const [createOpen,    setCreateOpen]    = useState(false)
+  const [createForm,    setCreateForm]    = useState({
+    username:'', email:'', firstName:'', lastName:'', phoneNumber:'',
+    department: 'OTHER', roles: ['ROLE_EMPLOYEE'],
+  })
+  const [createBusy,    setCreateBusy]    = useState(false)
+  // Terminate
+  const [termUser,      setTermUser]      = useState(null)
+  const [termReason,    setTermReason]    = useState('')
+  const [termBusy,      setTermBusy]      = useState(false)
+  // Suspend (temporary block + session kill, fully reversible)
+  const [suspUser,      setSuspUser]      = useState(null)
+  const [suspReason,    setSuspReason]    = useState('')
+  const [suspBusy,      setSuspBusy]      = useState(false)
 
   const { data, isLoading } = useQuery({
     queryKey: showDeprecated ? ['users-deprecated', page] : ['users', page, search],
@@ -76,6 +92,50 @@ export default function UsersPage() {
     } catch (e) { toast.error(getErrorMessage(e)) }
   }
 
+  const handleCreate = async () => {
+    setCreateBusy(true)
+    try {
+      await usersApi.adminCreate(createForm)
+      qc.invalidateQueries({ queryKey: ['users'] })
+      toast.success(`Account created — temp password emailed to ${createForm.email}`)
+      setCreateOpen(false)
+      setCreateForm({ username:'', email:'', firstName:'', lastName:'', phoneNumber:'',
+                      department: 'OTHER', roles: ['ROLE_EMPLOYEE'] })
+    } catch (e) { toast.error(getErrorMessage(e)) }
+    finally { setCreateBusy(false) }
+  }
+
+  const handleTerminate = async () => {
+    if (!termReason || termReason.trim().length < 5) {
+      toast.error('A reason of at least 5 characters is required to terminate')
+      return
+    }
+    setTermBusy(true)
+    try {
+      await usersApi.terminate(termUser.id, termReason.trim())
+      qc.invalidateQueries({ queryKey: ['users'] })
+      toast.success('User terminated — access revoked immediately')
+      setTermUser(null); setTermReason('')
+    } catch (e) { toast.error(getErrorMessage(e)) }
+    finally { setTermBusy(false) }
+  }
+
+  const handleSuspend = async () => {
+    if (!suspReason || suspReason.trim().length < 5) {
+      toast.error('A reason of at least 5 characters is required to suspend')
+      return
+    }
+    setSuspBusy(true)
+    try {
+      await usersApi.suspend(suspUser.id, suspReason.trim())
+      qc.invalidateQueries({ queryKey: ['users'] })
+      toast.success('User suspended — login blocked and all sessions terminated')
+      setSuspUser(null); setSuspReason('')
+    } catch (e) { toast.error(getErrorMessage(e)) }
+    finally { setSuspBusy(false) }
+  }
+
+
   return (
     <div className="animate-fade-in">
       <div className="page-header mb-5">
@@ -84,13 +144,31 @@ export default function UsersPage() {
           <p className="page-subtitle">{total} user{total !== 1 ? 's' : ''}</p>
         </div>
         {isAdmin() && (
-          <button onClick={() => { setShowDeprecated(v => !v); setPage(1) }}
-            className={clsx('btn-secondary gap-2', showDeprecated && 'border-amber-300 text-amber-700 bg-amber-50')}>
-            <HiOutlineArchive className="w-4 h-4" />
-            {showDeprecated ? 'Show active' : 'View deprecated'}
-          </button>
+          <div className="flex items-center gap-2">
+            {!showDeprecated && (
+              <button onClick={() => setCreateOpen(true)} className="btn-primary gap-2">
+                <HiOutlineUserAdd className="w-4 h-4" /> Create user
+              </button>
+            )}
+            <button onClick={() => { setShowDeprecated(v => !v); setPage(1) }}
+              className={clsx('btn-secondary gap-2', showDeprecated && 'border-amber-300 text-amber-700 bg-amber-50')}>
+              <HiOutlineArchive className="w-4 h-4" />
+              {showDeprecated ? 'Show active' : 'View deprecated'}
+            </button>
+          </div>
         )}
       </div>
+
+      {isAdmin() && !showDeprecated && (
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-surface-500 mb-4 p-3 bg-surface-50 rounded-xl border border-surface-100">
+          <span className="font-medium text-surface-700">User actions:</span>
+          <span title="Edit roles" className="flex items-center gap-1"><HiOutlineShieldCheck className="w-3.5 h-3.5 text-primary-500" /> Edit roles</span>
+          <span title="Toggle active/inactive" className="flex items-center gap-1"><HiOutlineBan className="w-3.5 h-3.5 text-yellow-500" /> Toggle active</span>
+          <span title="Deprecate — soft disable, no session kill" className="flex items-center gap-1"><HiOutlineArchive className="w-3.5 h-3.5 text-amber-500" /> Deprecate (soft)</span>
+          <span title="Suspend — block login + force logout, reversible" className="flex items-center gap-1 font-medium text-orange-600"><HiOutlineBan className="w-3.5 h-3.5" /> Suspend (reversible)</span>
+          <span title="Terminate — permanent, sends email" className="flex items-center gap-1 font-medium text-red-600"><HiOutlineX className="w-3.5 h-3.5" /> Terminate (permanent)</span>
+        </div>
+      )}
 
       {!showDeprecated && (
         <div className="relative mb-5 max-w-md">
@@ -114,6 +192,7 @@ export default function UsersPage() {
               <tr>
                 <th>User</th>
                 <th>Roles</th>
+                <th>Department</th>
                 <th>Status</th>
                 {showDeprecated ? <th>Reason</th> : <th>Last login</th>}
                 <th>Joined</th>
@@ -146,9 +225,20 @@ export default function UsersPage() {
                     </div>
                   </td>
                   <td>
-                    <span className={clsx('badge', u.isActive ? 'badge-green' : 'badge-red')}>
-                      {u.isActive ? 'Active' : 'Inactive'}
+                    <span className="badge bg-surface-100 text-surface-700">
+                      {(u.department || 'OTHER').charAt(0) + (u.department || 'OTHER').slice(1).toLowerCase()}
                     </span>
+                  </td>
+                  <td>
+                    {u.terminatedAt ? (
+                      <span className="badge badge-red" title={u.terminationReason ?? ''}>Terminated</span>
+                    ) : u.resignationEffectiveDate ? (
+                      <span className="badge badge-amber" title={`Effective ${new Date(u.resignationEffectiveDate).toLocaleDateString()}`}>Resigning</span>
+                    ) : (
+                      <span className={clsx('badge', u.isActive ? 'badge-green' : 'badge-red')}>
+                        {u.isActive ? 'Active' : 'Inactive'}
+                      </span>
+                    )}
                   </td>
                   {showDeprecated
                     ? <td className="text-xs text-surface-500">{u.deprecationReason || '—'}</td>
@@ -177,9 +267,17 @@ export default function UsersPage() {
                                     ? <HiOutlineBan className="w-4 h-4 text-yellow-500" />
                                     : <HiOutlineCheckCircle className="w-4 h-4 text-green-500" />}
                                 </button>
-                                <button onClick={() => setDeprUser(u)} title="Deprecate user"
+                                <button onClick={() => setDeprUser(u)} title="Deprecate user (soft disable, no session kill)"
                                   className="btn-ghost p-1.5 rounded-lg text-amber-500 hover:bg-amber-50">
                                   <HiOutlineArchive className="w-4 h-4" />
+                                </button>
+                                <button onClick={() => { setSuspUser(u); setSuspReason('') }} title="Suspend user (block login + force logout, reversible)"
+                                  className="btn-ghost p-1.5 rounded-lg text-orange-500 hover:bg-orange-50">
+                                  <HiOutlineBan className="w-4 h-4" />
+                                </button>
+                                <button onClick={() => setTermUser(u)} title="Terminate user (permanent — sends email)"
+                                  className="btn-ghost p-1.5 rounded-lg text-red-500 hover:bg-red-50">
+                                  <HiOutlineX className="w-4 h-4" />
                                 </button>
                               </>
                             )}
@@ -234,6 +332,150 @@ export default function UsersPage() {
               <button onClick={handleDeprecate} disabled={deprLoading}
                 className="btn bg-amber-600 text-white hover:bg-amber-700 shadow-sm">
                 {deprLoading ? 'Deprecating…' : 'Deprecate user'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Create user modal */}
+      <Modal open={createOpen} onClose={() => setCreateOpen(false)}
+        title="Create user"
+        size="md"
+        footer={<>
+          <button className="btn-secondary" onClick={() => setCreateOpen(false)}>Cancel</button>
+          <button className="btn-primary" disabled={createBusy} onClick={handleCreate}>
+            {createBusy ? 'Creating…' : 'Create & email password'}
+          </button>
+        </>}>
+        <p className="text-sm text-surface-500 mb-4">
+          A strong random password will be generated and emailed to the user.
+          They'll be required to change it the first time they log in.
+        </p>
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="label text-xs">First name</label>
+            <input className="input" value={createForm.firstName}
+              onChange={e => setCreateForm(f => ({ ...f, firstName: e.target.value }))} />
+          </div>
+          <div>
+            <label className="label text-xs">Last name</label>
+            <input className="input" value={createForm.lastName}
+              onChange={e => setCreateForm(f => ({ ...f, lastName: e.target.value }))} />
+          </div>
+        </div>
+        <div className="mt-3">
+          <label className="label text-xs">Username</label>
+          <input className="input" value={createForm.username}
+            onChange={e => setCreateForm(f => ({ ...f, username: e.target.value }))} />
+        </div>
+        <div className="mt-3">
+          <label className="label text-xs">Email — must be a real address</label>
+          <input type="email" className="input" placeholder="user@company.com"
+            value={createForm.email}
+            onChange={e => setCreateForm(f => ({ ...f, email: e.target.value }))} />
+        </div>
+        <div className="mt-3">
+          <label className="label text-xs">Phone <span className="text-surface-400 font-normal">(optional)</span></label>
+          <input className="input" value={createForm.phoneNumber}
+            onChange={e => setCreateForm(f => ({ ...f, phoneNumber: e.target.value }))} />
+        </div>
+        <div className="mt-3">
+          <label className="label text-xs">Department</label>
+          <select className="input"
+            value={createForm.department}
+            onChange={e => setCreateForm(f => ({ ...f, department: e.target.value }))}>
+            <option value="HR">HR</option>
+            <option value="ACCOUNT">Account</option>
+            <option value="ENGINEERING">Engineering</option>
+            <option value="SALES">Sales</option>
+            <option value="OPERATIONS">Operations</option>
+            <option value="OTHER">Other</option>
+          </select>
+        </div>
+        <div className="mt-3">
+          <label className="label text-xs">Roles</label>
+          <div className="flex flex-wrap gap-2 mt-1">
+            {ALL_ROLES.map(role => {
+              const checked = createForm.roles.includes(role)
+              return (
+                <button key={role} type="button"
+                  onClick={() => setCreateForm(f => ({
+                    ...f,
+                    roles: checked ? f.roles.filter(r => r !== role) : [...f.roles, role],
+                  }))}
+                  className={clsx('px-3 py-1.5 rounded-lg text-xs font-medium border',
+                    checked
+                      ? 'bg-primary-600 text-white border-primary-600'
+                      : 'bg-white text-surface-600 border-surface-200 hover:border-primary-300')}>
+                  {role.replace('ROLE_','')}
+                </button>
+              )
+            })}
+          </div>
+          <p className="text-xs text-surface-400 mt-1">Defaults to Employee if none selected.</p>
+        </div>
+      </Modal>
+
+      {/* Terminate user modal */}
+      {termUser && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/50" onClick={() => setTermUser(null)} />
+          <div className="relative bg-white rounded-2xl shadow-modal p-6 w-full max-w-md animate-slide-up">
+            <div className="flex items-center gap-2 mb-1">
+              <div className="w-8 h-8 rounded-lg bg-red-100 text-red-700 flex items-center justify-center">
+                <HiOutlineX className="w-4 h-4" />
+              </div>
+              <h2 className="text-lg font-semibold">Terminate user — immediate</h2>
+            </div>
+            <p className="text-sm text-surface-500 mb-4">
+              <strong>{termUser.firstName} {termUser.lastName}</strong> will be logged out
+              within seconds and cannot log in again. The reason is recorded in the audit
+              trail and emailed to the user.
+            </p>
+            <label className="label">Reason <span className="text-red-500">*</span> (5–500 chars)</label>
+            <textarea value={termReason} onChange={e => setTermReason(e.target.value)}
+              placeholder="e.g. Policy violation. Specifically: …"
+              rows={3} className="input mb-5" autoFocus />
+            <div className="flex gap-3 justify-end">
+              <button className="btn-secondary" onClick={() => { setTermUser(null); setTermReason('') }}>Cancel</button>
+              <button onClick={handleTerminate} disabled={termBusy}
+                className="btn bg-red-600 text-white hover:bg-red-700 shadow-sm">
+                {termBusy ? 'Terminating…' : 'Terminate user'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Suspend user modal — temporary block with force-logout, fully reversible */}
+      {suspUser && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/50" onClick={() => setSuspUser(null)} />
+          <div className="relative bg-white rounded-2xl shadow-modal p-6 w-full max-w-md animate-slide-up">
+            <div className="flex items-center gap-2 mb-1">
+              <div className="w-8 h-8 rounded-lg bg-orange-100 text-orange-700 flex items-center justify-center">
+                <HiOutlineBan className="w-4 h-4" />
+              </div>
+              <h2 className="text-lg font-semibold">Suspend user — temporary block</h2>
+            </div>
+            <p className="text-sm text-surface-500 mb-1">
+              <strong>{suspUser.firstName} {suspUser.lastName}</strong> will be immediately
+              blocked from logging in and all active sessions will be force-terminated.
+            </p>
+            <p className="text-xs text-surface-400 mb-4">
+              Unlike termination, suspension is fully reversible — use <strong>Restore</strong> to
+              reinstate the account. No termination email is sent.
+            </p>
+            <label className="label">Reason <span className="text-red-500">*</span> (5–500 chars)</label>
+            <textarea value={suspReason} onChange={e => setSuspReason(e.target.value)}
+              placeholder="e.g. Under investigation. Access suspended pending review."
+              rows={3} className="input mb-5" autoFocus />
+            <div className="flex gap-3 justify-end">
+              <button className="btn-secondary" onClick={() => { setSuspUser(null); setSuspReason('') }}>Cancel</button>
+              <button onClick={handleSuspend} disabled={suspBusy}
+                className="btn bg-orange-600 text-white hover:bg-orange-700 shadow-sm">
+                {suspBusy ? 'Suspending…' : 'Suspend user'}
               </button>
             </div>
           </div>

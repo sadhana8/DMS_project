@@ -23,6 +23,22 @@ export const usersApi = {
   updateProfile:  (data)       => client.put('/users/profile', data).then(r => r.data),
   changePassword: (data)       => client.put('/auth/change-password', data).then(r => r.data),
   me:             ()           => client.get('/users/me').then(r => r.data),
+
+  // ── New admin lifecycle endpoints ─────────────────────────────────
+  /** Admin creates a user. Backend generates random password, emails it. */
+  adminCreate:    (data)       => client.post('/users/admin-create',  data).then(r => r.data),
+  /** Immediate access revocation. Reason required (5-500 chars). */
+  terminate:      (id, reason) => client.post(`/users/${id}/terminate`, { reason }).then(r => r.data),
+  /**
+   * Temporary suspension — blocks login and force-logouts active sessions.
+   * No termination email is sent. Fully reversible via restore.
+   * Reason required.
+   */
+  suspend:        (id, reason) => client.post(`/users/${id}/suspend`, { reason }).then(r => r.data),
+  /** Self resignation. Optional reason and effectiveDate (yyyy-mm-dd). */
+  resignSelf:     (data)       => client.post('/users/me/resign', data ?? {}).then(r => r.data),
+  /** Admin records resignation on someone's behalf. */
+  resignFor:      (id, data)   => client.post(`/users/${id}/resign`, data ?? {}).then(r => r.data),
 }
 
 export const dashboardApi = {

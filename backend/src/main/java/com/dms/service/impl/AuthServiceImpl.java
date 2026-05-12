@@ -49,6 +49,22 @@ public class AuthServiceImpl {
         );
         User user = userRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+
+        // Terminated users can never log in
+        if (user.getTerminatedAt() != null) {
+            throw new org.springframework.security.authentication.DisabledException(
+                    "Your account has been terminated. Reason: "
+                    + (user.getTerminationReason() == null ? "(not specified)" : user.getTerminationReason())
+                    + ". Please contact your administrator.");
+        }
+        // Resigned users lose access at effective date
+        if (user.getResignationEffectiveDate() != null
+                && !user.getResignationEffectiveDate().isAfter(LocalDateTime.now())) {
+            throw new org.springframework.security.authentication.DisabledException(
+                    "Your access has been revoked as your resignation took effect on "
+                    + user.getResignationEffectiveDate().toLocalDate() + ".");
+        }
+
         user.setLastLogin(LocalDateTime.now());
         userRepository.save(user);
 
@@ -56,7 +72,26 @@ public class AuthServiceImpl {
         String accessToken = jwtUtil.generateToken(userDetails);
         String refreshToken = createRefreshToken(user);
 
-        return buildAuthResponse(accessToken, refreshToken, user);
+        AuthResponse resp = buildAuthResponse(accessToken, refreshToken, user);
+        resp.setMustChangePassword(Boolean.TRUE.equals(user.getMustChangePassword()));
+        return resp;
+    }
+
+    /**
+     * Used by admin-created accounts on first login. The user has just
+     * authenticated via a temp password; this method changes it without
+     * requiring the current one again, and clears the
+     * {@code mustChangePassword} flag.
+     */
+    @Transactional
+    public void firstLoginPasswordChange(String userEmail,
+            com.dms.dto.request.FirstLoginPasswordChangeRequest req) {
+        User user = userRepository.findByEmail(userEmail)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+        user.setPassword(passwordEncoder.encode(req.getNewPassword()));
+        user.setMustChangePassword(false);
+        userRepository.save(user);
+        refreshTokenRepository.revokeAllByUserId(user.getId());
     }
 
     /**
@@ -120,6 +155,7 @@ public class AuthServiceImpl {
                 .firstName(request.getFirstName())
                 .lastName(request.getLastName())
                 .phoneNumber(request.getPhoneNumber())
+                .department(parseDepartmentForRegister(request.getDepartment()))
                 .roles(new HashSet<>(Set.of(defaultRole)))
                 .isActive(!pending) // active unless we're parking for review
                 .isEmailVerified(false)
@@ -198,10 +234,24 @@ public class AuthServiceImpl {
 
     @Transactional
     public void forgotPassword(String email) {
-        User user = userRepository.findByEmail(email).orElse(null);
-        if (user == null) {
-            return;
+        // Step 1: Format check is already done at the controller via @Email/@Pattern.
+        //         Here we only need domain validity + user existence.
+
+        // Step 2: Check if the email domain has a mail server (MX record).
+        //         This catches addresses with invalid/non-existent domains
+        //         like @gds.com, @fakedomain.xyz, etc.
+        if (!domainCanReceiveMail(email)) {
+            throw new com.dms.exception.BadRequestException(
+                    "This email domain doesn't accept mail. Please double-check the address.");
         }
+
+        // Step 3: Reject if no user exists with this email.
+        //         This is the explicit-failure mode the user requested.
+        //         (Default best-practice would silently succeed to prevent
+        //         account enumeration; we trade that off for clearer UX.)
+        User user = userRepository.findByEmail(email).orElseThrow(
+                () -> new ResourceNotFoundException(
+                        "No account is registered with " + email + "."));
 
         passwordResetTokenRepository.deleteByUserId(user.getId());
 
@@ -215,6 +265,80 @@ public class AuthServiceImpl {
             emailService.sendPasswordResetEmail(user, token);
         } catch (Exception e) {
             log.warn("Password reset email failed: {}", e.getMessage());
+        }
+    }
+
+    /**
+     * Checks whether the email's domain has a mail server (MX record) — or, as
+     * a fallback, any address record (A/AAAA). Returns false for typos and
+     * non-existent domains like {@code gds.com} or {@code fakemail.xyz}.
+     *
+     * <p>
+     * Implementation uses JNDI's built-in DNS provider — no extra dependency. A
+     * short timeout is set so a slow DNS doesn't hold up the request.
+     */
+    private boolean domainCanReceiveMail(String email) {
+        if (email == null) {
+            return false;
+        }
+        int at = email.lastIndexOf('@');
+        if (at < 0 || at == email.length() - 1) {
+            return false;
+        }
+        String domain = email.substring(at + 1).trim();
+        if (domain.isEmpty() || domain.contains(" ")) {
+            return false;
+        }
+
+        javax.naming.directory.DirContext ctx = null;
+        try {
+            java.util.Hashtable<String, String> env = new java.util.Hashtable<>();
+            env.put("java.naming.factory.initial", "com.sun.jndi.dns.DnsContextFactory");
+            env.put("com.sun.jndi.dns.timeout.initial", "3000");
+            env.put("com.sun.jndi.dns.timeout.retries", "1");
+            ctx = new javax.naming.directory.InitialDirContext(env);
+
+            // Try MX first — what real mail servers publish
+            try {
+                javax.naming.directory.Attributes attrs
+                        = ctx.getAttributes(domain, new String[]{"MX"});
+                if (attrs.get("MX") != null && attrs.get("MX").size() > 0) {
+                    return true;
+                }
+            } catch (javax.naming.NameNotFoundException e) {
+                // The DNS server explicitly said this domain doesn't exist.
+                log.info("Email domain rejected (NXDOMAIN): {}", domain);
+                return false;
+            } catch (javax.naming.NamingException ignored) {
+                // Could be "no MX record but the domain exists" — fall through to A check.
+            }
+
+            // Fall back to any address record. Many small domains don't publish MX
+            // but accept mail anyway via their A record.
+            try {
+                javax.naming.directory.Attributes attrs
+                        = ctx.getAttributes(domain, new String[]{"A", "AAAA"});
+                boolean hasA = attrs.get("A") != null && attrs.get("A").size() > 0;
+                boolean hasAAAA = attrs.get("AAAA") != null && attrs.get("AAAA").size() > 0;
+                if (hasA || hasAAAA) {
+                    return true;
+                }
+                log.info("Email domain rejected (no MX/A/AAAA): {}", domain);
+                return false;
+            } catch (javax.naming.NameNotFoundException e) {
+                log.info("Email domain rejected (NXDOMAIN): {}", domain);
+                return false;
+            }
+        } catch (Exception e) {
+            // Only here if DNS itself failed (e.g., no network). Allow rather
+            // than block everyone in an outage.
+            log.warn("DNS infrastructure error checking {}: {}", domain, e.getMessage());
+            return true;
+        } finally {
+            if (ctx != null) try {
+                ctx.close();
+            } catch (Exception ignored) {
+            }
         }
     }
 
@@ -268,6 +392,20 @@ public class AuthServiceImpl {
                 .tokenType("Bearer").user(mapUserToResponse(user)).build();
     }
 
+    /**
+     * Parse a department string from the register request, defaulting to OTHER.
+     */
+    private com.dms.entity.Department parseDepartmentForRegister(String s) {
+        if (s == null || s.isBlank()) {
+            return com.dms.entity.Department.OTHER;
+        }
+        try {
+            return com.dms.entity.Department.valueOf(s.trim().toUpperCase());
+        } catch (Exception e) {
+            return com.dms.entity.Department.OTHER;
+        }
+    }
+
     public UserResponse mapUserToResponse(User user) {
         return UserResponse.builder()
                 .id(user.getId())
@@ -276,6 +414,10 @@ public class AuthServiceImpl {
                 .firstName(user.getFirstName())
                 .lastName(user.getLastName())
                 .phoneNumber(user.getPhoneNumber())
+                .address(user.getAddress())
+                .department(user.getDepartment() != null
+                        ? user.getDepartment().name()
+                        : com.dms.entity.Department.OTHER.name())
                 .profilePicture(user.getProfilePicture())
                 .isActive(user.getIsActive())
                 .isEmailVerified(user.getIsEmailVerified())
@@ -283,6 +425,12 @@ public class AuthServiceImpl {
                 .createdAt(user.getCreatedAt())
                 .updatedAt(user.getUpdatedAt())
                 .lastLogin(user.getLastLogin())
+                .mustChangePassword(user.getMustChangePassword())
+                .resignationDate(user.getResignationDate())
+                .resignationEffectiveDate(user.getResignationEffectiveDate())
+                .terminatedAt(user.getTerminatedAt())
+                .terminationReason(user.getTerminationReason())
+                .terminatedBy(user.getTerminatedBy())
                 .build();
     }
 }

@@ -150,6 +150,140 @@ public class EmailService {
         sendEmail(user.getEmail(), subject, html);
     }
 
+    @Async
+    public void sendAdminCreatedAccountEmail(User user, String tempPassword) {
+        String subject = "Your DocVault account has been created";
+        String html = """
+            <!DOCTYPE html>
+            <html>
+            <body style="font-family:Inter,sans-serif;background:#f8fafc;margin:0;padding:40px 20px;">
+              <div style="max-width:560px;margin:0 auto;background:#fff;border-radius:16px;border:1px solid #e2e8f0;overflow:hidden;">
+                <div style="background:#2563eb;padding:32px;text-align:center;">
+                  <h1 style="color:#fff;margin:0;font-size:24px;font-weight:700;">DocVault</h1>
+                </div>
+                <div style="padding:36px 32px;">
+                  <h2 style="color:#0f172a;font-size:20px;margin:0 0 12px;">Welcome, %s!</h2>
+                  <p style="color:#475569;line-height:1.6;margin:0 0 12px;">
+                    An administrator has created a DocVault account for you. Your temporary login credentials are:
+                  </p>
+                  <div style="background:#f1f5f9;border-radius:10px;padding:16px;margin:18px 0;">
+                    <p style="margin:0 0 6px;color:#475569;"><strong>Email:</strong> %s</p>
+                    <p style="margin:0;color:#475569;"><strong>Temporary password:</strong>
+                      <code style="background:#fff;padding:4px 10px;border-radius:6px;color:#dc2626;font-size:14px;">%s</code></p>
+                  </div>
+                  <p style="color:#dc2626;line-height:1.6;margin:0 0 20px;font-size:13px;">
+                    <strong>Important:</strong> You will be required to change this password the first time you log in.
+                  </p>
+                  <a href="%s/login" style="display:inline-block;background:#2563eb;color:#fff;text-decoration:none;padding:12px 28px;border-radius:8px;font-weight:600;font-size:14px;">
+                    Log In
+                  </a>
+                  <p style="color:#94a3b8;font-size:12px;margin:24px 0 0;">
+                    If you weren't expecting this email, please contact your administrator.
+                  </p>
+                </div>
+              </div>
+            </body>
+            </html>
+            """.formatted(user.getFirstName(), user.getEmail(), tempPassword, frontendUrl);
+        sendEmail(user.getEmail(), subject, html);
+    }
+
+    @Async
+    public void sendAccountRejectedEmail(User user, String reason) {
+        String subject = "Your DocVault registration was not approved";
+        String safeReason = reason == null || reason.isBlank() ? "No reason was provided." : reason;
+        String html = """
+            <!DOCTYPE html>
+            <html>
+            <body style="font-family:Inter,sans-serif;background:#f8fafc;margin:0;padding:40px 20px;">
+              <div style="max-width:560px;margin:0 auto;background:#fff;border-radius:16px;border:1px solid #e2e8f0;overflow:hidden;">
+                <div style="background:#dc2626;padding:32px;text-align:center;">
+                  <h1 style="color:#fff;margin:0;font-size:24px;font-weight:700;">DocVault</h1>
+                </div>
+                <div style="padding:36px 32px;">
+                  <h2 style="color:#0f172a;font-size:20px;margin:0 0 12px;">Registration not approved</h2>
+                  <p style="color:#475569;line-height:1.6;margin:0 0 12px;">Hi %s,</p>
+                  <p style="color:#475569;line-height:1.6;margin:0 0 16px;">
+                    Unfortunately, your registration request for DocVault was not approved.
+                  </p>
+                  <div style="background:#fef2f2;border-left:4px solid #dc2626;border-radius:6px;padding:14px 18px;margin:0 0 18px;">
+                    <p style="margin:0;color:#7f1d1d;font-size:13px;"><strong>Reason:</strong> %s</p>
+                  </div>
+                  <p style="color:#475569;line-height:1.6;margin:0 0 8px;font-size:13px;">
+                    If you believe this was a mistake, please contact your administrator.
+                    You may also re-apply with the same email address.
+                  </p>
+                </div>
+              </div>
+            </body>
+            </html>
+            """.formatted(user.getFirstName(), safeReason);
+        sendEmail(user.getEmail(), subject, html);
+    }
+
+    @Async
+    public void sendTerminationEmail(User user, String reason, String terminatedBy) {
+        String subject = "Your DocVault account has been terminated";
+        String safeReason = reason == null || reason.isBlank() ? "No reason was provided." : reason;
+        String html = """
+            <!DOCTYPE html>
+            <html>
+            <body style="font-family:Inter,sans-serif;background:#f8fafc;margin:0;padding:40px 20px;">
+              <div style="max-width:560px;margin:0 auto;background:#fff;border-radius:16px;border:1px solid #e2e8f0;overflow:hidden;">
+                <div style="background:#dc2626;padding:32px;text-align:center;">
+                  <h1 style="color:#fff;margin:0;font-size:24px;font-weight:700;">DocVault</h1>
+                </div>
+                <div style="padding:36px 32px;">
+                  <h2 style="color:#0f172a;font-size:20px;margin:0 0 12px;">Account Terminated</h2>
+                  <p style="color:#475569;line-height:1.6;margin:0 0 16px;">Hi %s,</p>
+                  <p style="color:#475569;line-height:1.6;margin:0 0 16px;">
+                    Your DocVault account access has been terminated by %s, effective immediately.
+                  </p>
+                  <div style="background:#fef2f2;border-left:4px solid #dc2626;border-radius:6px;padding:14px 18px;margin:0 0 18px;">
+                    <p style="margin:0;color:#7f1d1d;font-size:13px;"><strong>Reason:</strong> %s</p>
+                  </div>
+                  <p style="color:#475569;line-height:1.6;margin:0;font-size:13px;">
+                    If you have questions, please contact your administrator.
+                  </p>
+                </div>
+              </div>
+            </body>
+            </html>
+            """.formatted(user.getFirstName(), terminatedBy, safeReason);
+        sendEmail(user.getEmail(), subject, html);
+    }
+
+    @Async
+    public void sendResignationConfirmedEmail(User user, java.time.LocalDateTime effectiveDate) {
+        String subject = "Resignation acknowledged — DocVault access will end on " +
+            effectiveDate.toLocalDate();
+        String html = """
+            <!DOCTYPE html>
+            <html>
+            <body style="font-family:Inter,sans-serif;background:#f8fafc;margin:0;padding:40px 20px;">
+              <div style="max-width:560px;margin:0 auto;background:#fff;border-radius:16px;border:1px solid #e2e8f0;overflow:hidden;">
+                <div style="background:#2563eb;padding:32px;text-align:center;">
+                  <h1 style="color:#fff;margin:0;font-size:24px;font-weight:700;">DocVault</h1>
+                </div>
+                <div style="padding:36px 32px;">
+                  <h2 style="color:#0f172a;font-size:20px;margin:0 0 12px;">Resignation acknowledged</h2>
+                  <p style="color:#475569;line-height:1.6;margin:0 0 16px;">Hi %s,</p>
+                  <p style="color:#475569;line-height:1.6;margin:0 0 16px;">
+                    Your resignation has been recorded. Your DocVault access will be revoked
+                    at end of day on <strong>%s</strong>.
+                  </p>
+                  <p style="color:#475569;line-height:1.6;margin:0 0 8px;font-size:13px;">
+                    Please ensure you've downloaded any personal documents before that date.
+                    Thank you for your service.
+                  </p>
+                </div>
+              </div>
+            </body>
+            </html>
+            """.formatted(user.getFirstName(), effectiveDate.toLocalDate());
+        sendEmail(user.getEmail(), subject, html);
+    }
+
     private void sendEmail(String to, String subject, String htmlBody) {
         try {
             MimeMessage message = mailSender.createMimeMessage();

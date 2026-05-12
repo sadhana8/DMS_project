@@ -9,15 +9,16 @@ import clsx from 'clsx'
 import {
   HiOutlineShieldCheck, HiOutlineCog, HiOutlineUserGroup,
   HiOutlineChartBar, HiOutlineDocumentText, HiOutlineCheck,
-  HiOutlineX, HiOutlineExclamation,
+  HiOutlineX, HiOutlineExclamation, HiOutlineKey,
 } from 'react-icons/hi'
 
 const SECURITY_CHECKS = [
   { label: 'JWT authentication',    ok: true,  note: 'HMAC-SHA256 access + refresh tokens' },
   { label: 'BCrypt password hashing', ok: true, note: '12 rounds' },
-  { label: 'Role-based access control', ok: true, note: '4 roles — ADMIN, MANAGER, EDITOR, VIEWER' },
+  { label: 'Role-based access control', ok: true, note: '8 roles — ADMIN, HR, ACCOUNT, EMPLOYEE, MANAGER, FINANCE, LEGAL, REVIEWER' },
   { label: 'CORS configured',        ok: true,  note: 'Localhost origins in dev' },
   { label: 'Audit trail active',     ok: true,  note: 'All write actions logged' },
+  { label: 'Two-factor authentication', ok: true, note: 'Email-based OTP, opt-in per user' },
   { label: 'HTTPS',                  ok: false, note: 'Configure Nginx + SSL for production' },
   { label: 'Rate limiting',          ok: false, note: 'Add API gateway for production' },
 ]
@@ -113,6 +114,7 @@ export default function AdminPage() {
             { to:'/audit',     icon: HiOutlineShieldCheck, label: 'Audit Trail',     desc: 'All system events' },
             { to:'/approvals', icon: HiOutlineUserGroup,   label: 'Approvals',       desc: `${pending ?? 0} pending` },
             { to:'/users',     icon: HiOutlineUserGroup,   label: 'Manage Users',    desc: `${stats?.totalUsers ?? 0} users` },
+            { to:'/admin/roles', icon: HiOutlineKey,       label: 'Roles',           desc: 'Permissions matrix' },
             { to:'/settings',  icon: HiOutlineCog,         label: 'System Settings', desc: 'Configure DocVault' },
           ].map(l => (
             <Link key={l.to} to={l.to} className="flex flex-col items-center gap-2 p-4 rounded-xl border border-surface-200 hover:border-primary-300 hover:bg-primary-50 transition-all text-center">
