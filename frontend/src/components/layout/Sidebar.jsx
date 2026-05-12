@@ -1,90 +1,99 @@
-import { NavLink, useLocation } from 'react-router-dom'
+import { NavLink } from 'react-router-dom'
 import { useAuth } from '@/context/AuthContext'
-import {
-  HiOutlineViewGrid, HiOutlineDocumentText, HiOutlineUsers,
-  HiOutlineCog, HiOutlineX, HiOutlineFolder,
-  HiOutlineShieldCheck,
-} from 'react-icons/hi'
+import { useQuery } from '@tanstack/react-query'
+import { approvalsApi } from '@/api/approvals'
+import { notificationsApi } from '@/api/notifications'
 import clsx from 'clsx'
-
-const NAV = [
-  { to: '/dashboard', icon: HiOutlineViewGrid,     label: 'Dashboard',  role: null },
-  { to: '/documents', icon: HiOutlineDocumentText, label: 'Documents',  role: null },
-  { to: '/users',     icon: HiOutlineUsers,        label: 'Users',      role: 'ROLE_MANAGER' },
-  { to: '/admin',     icon: HiOutlineShieldCheck,  label: 'Admin',      role: 'ROLE_ADMIN' },
-  { to: '/profile',   icon: HiOutlineCog,          label: 'Settings',   role: null },
-]
+import {
+  HiOutlineHome, HiOutlineDocumentText, HiOutlineUsers,
+  HiOutlineShieldCheck, HiOutlineBell, HiOutlineCog,
+  HiOutlineChartBar, HiOutlineUserGroup, HiOutlineViewGrid,
+} from 'react-icons/hi'
 
 export default function Sidebar({ open, onClose }) {
-  const { user, hasRole, isAdmin } = useAuth()
+  const { user, isAdmin, isManager, isEditor, logout } = useAuth()
 
-  const canSee = (role) => !role || hasRole(role) || isAdmin()
+  const { data: pendingApprovals = 0 } = useQuery({
+    queryKey: ['approval-count'],
+    queryFn:  approvalsApi.count,
+    enabled:  isAdmin(),
+    refetchInterval: 60_000,
+  })
 
-  const content = (
-    <div className="flex flex-col h-full">
-      {/* Logo */}
-      <div className="flex items-center justify-between px-5 py-4 border-b border-surface-100">
-        <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-lg bg-primary-600 flex items-center justify-center">
-            <HiOutlineFolder className="w-5 h-5 text-white" />
-          </div>
-          <span className="text-base font-semibold text-surface-900">DMS</span>
-        </div>
-        <button onClick={onClose} className="lg:hidden btn-ghost p-1.5 rounded-lg">
-          <HiOutlineX className="w-5 h-5" />
-        </button>
-      </div>
+  const { data: unreadNotif = 0 } = useQuery({
+    queryKey: ['notif-count'],
+    queryFn:  notificationsApi.unreadCount,
+    refetchInterval: 30_000,
+  })
 
-      {/* Nav */}
-      <nav className="flex-1 px-3 py-4 space-y-0.5">
-        {NAV.filter(n => canSee(n.role)).map(({ to, icon: Icon, label }) => (
-          <NavLink
-            key={to}
-            to={to}
-            onClick={onClose}
-            className={({ isActive }) =>
-              clsx('sidebar-link', isActive && 'active')
-            }
-          >
-            <Icon className="w-5 h-5 flex-shrink-0" />
-            {label}
-          </NavLink>
-        ))}
-      </nav>
+  const navItems = [
+    { to: '/dashboard',  label: 'Dashboard',     icon: HiOutlineHome,         show: true },
+    { to: '/documents',  label: 'Documents',      icon: HiOutlineDocumentText, show: true },
+    { to: '/users',      label: 'Users',          icon: HiOutlineUsers,        show: isManager() || isAdmin() },
+    { to: '/approvals',  label: 'Approvals',      icon: HiOutlineUserGroup,    show: isAdmin(), badge: pendingApprovals },
+    { to: '/audit',      label: 'Audit trail',    icon: HiOutlineShieldCheck,  show: isAdmin() },
+    { to: '/notifications', label: 'Notifications', icon: HiOutlineBell,       show: true, badge: unreadNotif },
+    { to: '/settings',   label: 'Settings',       icon: HiOutlineCog,          show: isAdmin() },
+  ].filter(i => i.show)
 
-      {/* User card */}
-      <div className="p-3 border-t border-surface-100">
-        <NavLink to="/profile" onClick={onClose} className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-surface-100 transition-colors">
-          <div className="w-8 h-8 rounded-full bg-primary-100 flex items-center justify-center text-primary-700 text-sm font-semibold flex-shrink-0">
-            {user?.firstName?.[0]}{user?.lastName?.[0]}
-          </div>
-          <div className="min-w-0">
-            <p className="text-sm font-medium text-surface-900 truncate">
-              {user?.firstName} {user?.lastName}
-            </p>
-            <p className="text-xs text-surface-500 truncate">{user?.email}</p>
-          </div>
-        </NavLink>
-      </div>
-    </div>
-  )
+  const initials = user
+    ? `${user.firstName?.charAt(0) ?? ''}${user.lastName?.charAt(0) ?? ''}`.toUpperCase()
+    : '?'
 
   return (
     <>
-      {/* Desktop */}
-      <aside className="hidden lg:flex flex-col w-64 bg-white border-r border-surface-200 flex-shrink-0">
-        {content}
-      </aside>
-
-      {/* Mobile overlay */}
+      {/* Mobile backdrop */}
       {open && (
-        <div className="fixed inset-0 z-50 lg:hidden flex">
-          <div className="absolute inset-0 bg-black/40 animate-fade-in" onClick={onClose} />
-          <aside className="relative w-64 bg-white flex flex-col animate-slide-in">
-            {content}
-          </aside>
-        </div>
+        <div className="fixed inset-0 bg-black/40 z-30 lg:hidden" onClick={onClose} />
       )}
+
+      <aside className={clsx(
+        'fixed top-0 left-0 h-full w-64 bg-white border-r border-surface-200 z-40 flex flex-col transition-transform duration-300',
+        'lg:relative lg:translate-x-0 lg:z-auto',
+        open ? 'translate-x-0' : '-translate-x-full'
+      )}>
+        {/* Logo */}
+        <div className="flex items-center gap-3 px-5 py-4 border-b border-surface-100">
+          <div className="w-8 h-8 bg-primary-600 rounded-lg flex items-center justify-center text-white font-bold text-sm">
+            D
+          </div>
+          <div>
+            <p className="font-semibold text-surface-900 text-sm">DMS</p>
+            <p className="text-xs text-surface-400">Document Management System</p>
+          </div>
+        </div>
+
+        {/* Nav */}
+        <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-0.5">
+          {navItems.map(({ to, label, icon: Icon, badge }) => (
+            <NavLink key={to} to={to} onClick={() => onClose?.()}
+              className={({ isActive }) => clsx('sidebar-link', isActive && 'active')}>
+              <Icon className="w-4 h-4 flex-shrink-0" />
+              <span className="flex-1">{label}</span>
+              {badge > 0 && (
+                <span className="w-5 h-5 bg-red-500 text-white rounded-full text-[10px] font-bold flex items-center justify-center flex-shrink-0">
+                  {badge > 9 ? '9+' : badge}
+                </span>
+              )}
+            </NavLink>
+          ))}
+        </nav>
+
+        {/* User card */}
+        <div className="border-t border-surface-100 p-3">
+          <NavLink to="/profile" className="flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-surface-50 transition-colors">
+            <div className="w-8 h-8 rounded-full bg-primary-100 text-primary-700 flex items-center justify-center text-xs font-bold flex-shrink-0">
+              {initials}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-surface-800 truncate">
+                {user?.firstName} {user?.lastName}
+              </p>
+              <p className="text-xs text-surface-400 truncate">{user?.email}</p>
+            </div>
+          </NavLink>
+        </div>
+      </aside>
     </>
   )
 }

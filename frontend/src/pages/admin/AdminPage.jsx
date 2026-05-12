@@ -1,133 +1,124 @@
 import { useQuery } from '@tanstack/react-query'
+import { Link } from 'react-router-dom'
 import { dashboardApi } from '@/api/users'
+import { approvalsApi } from '@/api/approvals'
+import { auditApi } from '@/api/audit'
 import { formatFileSize, formatDateTime } from '@/utils/helpers'
 import Spinner from '@/components/common/Spinner'
+import clsx from 'clsx'
 import {
-  HiOutlineServer, HiOutlineShieldCheck, HiOutlineDatabase,
-  HiOutlineChartBar, HiOutlineDocumentText, HiOutlineUsers,
+  HiOutlineShieldCheck, HiOutlineCog, HiOutlineUserGroup,
+  HiOutlineChartBar, HiOutlineDocumentText, HiOutlineCheck,
+  HiOutlineX, HiOutlineExclamation,
 } from 'react-icons/hi'
 
+const SECURITY_CHECKS = [
+  { label: 'JWT authentication',    ok: true,  note: 'HMAC-SHA256 access + refresh tokens' },
+  { label: 'BCrypt password hashing', ok: true, note: '12 rounds' },
+  { label: 'Role-based access control', ok: true, note: '4 roles — ADMIN, MANAGER, EDITOR, VIEWER' },
+  { label: 'CORS configured',        ok: true,  note: 'Localhost origins in dev' },
+  { label: 'Audit trail active',     ok: true,  note: 'All write actions logged' },
+  { label: 'HTTPS',                  ok: false, note: 'Configure Nginx + SSL for production' },
+  { label: 'Rate limiting',          ok: false, note: 'Add API gateway for production' },
+]
+
 export default function AdminPage() {
-  const { data: stats, isLoading } = useQuery({ queryKey: ['dashboard-stats'], queryFn: dashboardApi.stats })
-
-  if (isLoading) return <div className="flex justify-center py-20"><Spinner size="lg" /></div>
-
-  const systemCards = [
-    {
-      icon: HiOutlineDatabase,
-      label: 'Total storage used',
-      value: formatFileSize(stats?.storageUsed),
-      sub:   `of ${formatFileSize(stats?.storageLimit)} limit`,
-      color: 'bg-blue-50 text-blue-600',
-    },
-    {
-      icon: HiOutlineDocumentText,
-      label: 'Total documents',
-      value: stats?.totalDocuments ?? '—',
-      sub:   `${stats?.archivedDocuments ?? 0} archived`,
-      color: 'bg-green-50 text-green-600',
-    },
-    {
-      icon: HiOutlineUsers,
-      label: 'Registered users',
-      value: stats?.totalUsers ?? '—',
-      sub:   `${stats?.activeUsers ?? 0} active`,
-      color: 'bg-purple-50 text-purple-600',
-    },
-    {
-      icon: HiOutlineChartBar,
-      label: 'Uploads this month',
-      value: stats?.newThisMonth ?? '—',
-      sub:   'new documents',
-      color: 'bg-yellow-50 text-yellow-600',
-    },
-  ]
+  const { data: stats }   = useQuery({ queryKey: ['dashboard-stats'],   queryFn: dashboardApi.stats })
+  const { data: pending } = useQuery({ queryKey: ['approval-count'],    queryFn: approvalsApi.count })
+  const { data: audit }   = useQuery({ queryKey: ['audit-admin-stats'], queryFn: () => auditApi.stats() })
 
   return (
     <div className="animate-fade-in space-y-6">
       <div>
-        <h1 className="page-title">System Administration</h1>
-        <p className="page-subtitle">Monitor system health and manage settings</p>
+        <div className="flex items-center gap-2 mb-1"><HiOutlineShieldCheck className="w-5 h-5 text-primary-600" /><h1 className="page-title">Admin Dashboard</h1></div>
+        <p className="page-subtitle">System overview, health status and quick access to admin tools</p>
       </div>
 
-      {/* System stats */}
+      {/* Key metrics */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {systemCards.map(({ icon: Icon, label, value, sub, color }) => (
-          <div key={label} className="card p-5">
-            <div className={`w-10 h-10 rounded-xl flex items-center justify-center mb-3 ${color}`}>
-              <Icon className="w-5 h-5" />
-            </div>
-            <p className="text-2xl font-bold text-surface-900">{value}</p>
-            <p className="text-sm text-surface-600 mt-0.5">{label}</p>
-            <p className="text-xs text-surface-400 mt-0.5">{sub}</p>
+        {[
+          { label: 'Total documents', value: stats?.totalDocuments?.toLocaleString() ?? '—', colour: 'bg-blue-50 text-blue-700', to: '/documents' },
+          { label: 'Total users',     value: stats?.totalUsers?.toLocaleString() ?? '—',     colour: 'bg-green-50 text-green-700', to: '/users' },
+          { label: 'Pending approvals', value: pending ?? 0,                                colour: pending > 0 ? 'bg-amber-50 text-amber-700' : 'bg-surface-100 text-surface-600', to: '/approvals' },
+          { label: 'Storage used',    value: formatFileSize(stats?.storageUsed ?? 0),        colour: 'bg-purple-50 text-purple-700' },
+        ].map(s => (
+          <div key={s.label} className={s.to ? '' : ''}>
+            {s.to ? (
+              <Link to={s.to} className="card p-4 flex items-start justify-between hover:shadow-md transition-shadow block">
+                <div><p className="text-xs text-surface-500 mb-1">{s.label}</p><p className="text-2xl font-bold text-surface-900">{s.value}</p></div>
+                <div className={`w-9 h-9 rounded-lg flex items-center justify-center ${s.colour}`}><HiOutlineDocumentText className="w-4 h-4" /></div>
+              </Link>
+            ) : (
+              <div className="card p-4 flex items-start justify-between">
+                <div><p className="text-xs text-surface-500 mb-1">{s.label}</p><p className="text-2xl font-bold text-surface-900">{s.value}</p></div>
+                <div className={`w-9 h-9 rounded-lg flex items-center justify-center ${s.colour}`}><HiOutlineDocumentText className="w-4 h-4" /></div>
+              </div>
+            )}
           </div>
         ))}
       </div>
 
-      {/* Storage bar */}
-      <div className="card p-5">
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="text-base font-semibold text-surface-800">Storage capacity</h2>
-          <span className="text-sm text-surface-500">
-            {formatFileSize(stats?.storageUsed)} / {formatFileSize(stats?.storageLimit)}
-          </span>
-        </div>
-        <div className="h-3 rounded-full bg-surface-100 overflow-hidden">
-          <div
-            className="h-full rounded-full bg-primary-500 transition-all duration-700"
-            style={{ width: `${Math.min(100, ((stats?.storageUsed ?? 0) / (stats?.storageLimit ?? 1)) * 100)}%` }}
-          />
-        </div>
-        <p className="text-xs text-surface-400 mt-2">
-          {Math.round(((stats?.storageUsed ?? 0) / (stats?.storageLimit ?? 1)) * 100)}% used
-        </p>
-      </div>
-
-      {/* System info */}
-      <div className="card">
-        <div className="flex items-center gap-3 px-5 py-4 border-b border-surface-100">
-          <HiOutlineServer className="w-5 h-5 text-surface-400" />
-          <h2 className="text-base font-semibold text-surface-800">System information</h2>
-        </div>
-        <dl className="divide-y divide-surface-100">
-          {[
-            { label: 'Application',    value: 'DocVault v1.0.0' },
-            { label: 'Backend',        value: 'Spring Boot 3.2 · Java 17' },
-            { label: 'Database',       value: 'PostgreSQL' },
-            { label: 'Storage driver', value: 'Local filesystem (configurable to S3)' },
-            { label: 'Auth',           value: 'JWT (access + refresh tokens)' },
-            { label: 'Email provider', value: 'SMTP via JavaMailSender' },
-          ].map(({ label, value }) => (
-            <div key={label} className="flex items-center px-5 py-3">
-              <dt className="text-sm text-surface-500 w-44 flex-shrink-0">{label}</dt>
-              <dd className="text-sm text-surface-800 font-medium">{value}</dd>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+        {/* Top active users */}
+        <div className="card p-5">
+          <div className="flex items-center justify-between mb-4">
+            <p className="text-sm font-semibold text-surface-800">Top users — last 30 days</p>
+            <Link to="/audit" className="text-xs text-primary-600 hover:text-primary-800">Full audit →</Link>
+          </div>
+          {audit ? (
+            <div className="space-y-2">
+              {(audit.topUsers ?? []).slice(0,5).map((u, i) => (
+                <div key={i} className="flex items-center gap-3">
+                  <span className="w-5 text-xs text-surface-400 text-right">{i+1}</span>
+                  <div className="flex-1">
+                    <div className="flex items-center justify-between mb-0.5">
+                      <span className="text-sm text-surface-700">{u.user}</span>
+                      <span className="text-xs text-surface-500">{u.count} actions</span>
+                    </div>
+                    <div className="w-full bg-surface-100 rounded-full h-1.5">
+                      <div className="h-1.5 rounded-full bg-primary-500" style={{ width: `${Math.min(100, (u.count / ((audit.topUsers[0]?.count ?? 1))) * 100)}%` }} />
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
-          ))}
-        </dl>
-      </div>
-
-      {/* Security panel */}
-      <div className="card p-5">
-        <div className="flex items-center gap-3 mb-4">
-          <HiOutlineShieldCheck className="w-5 h-5 text-green-600" />
-          <h2 className="text-base font-semibold text-surface-800">Security status</h2>
+          ) : <div className="flex justify-center py-8"><Spinner /></div>}
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          {[
-            { label: 'JWT auth',      ok: true },
-            { label: 'Password BCrypt', ok: true },
-            { label: 'RBAC enabled',  ok: true },
-            { label: 'CORS configured', ok: true },
-            { label: 'HTTPS',         ok: false, note: 'Configure in production' },
-            { label: 'Rate limiting', ok: false, note: 'Add API gateway' },
-          ].map(({ label, ok, note }) => (
-            <div key={label} className={`flex items-center gap-2.5 p-3 rounded-xl ${ok ? 'bg-green-50' : 'bg-yellow-50'}`}>
-              <div className={`w-2 h-2 rounded-full flex-shrink-0 ${ok ? 'bg-green-500' : 'bg-yellow-500'}`} />
-              <div>
-                <p className={`text-sm font-medium ${ok ? 'text-green-800' : 'text-yellow-800'}`}>{label}</p>
-                {note && <p className="text-xs text-yellow-600">{note}</p>}
+
+        {/* Security checklist */}
+        <div className="card p-5">
+          <p className="text-sm font-semibold text-surface-800 mb-4">Security checklist</p>
+          <div className="space-y-3">
+            {SECURITY_CHECKS.map(s => (
+              <div key={s.label} className="flex items-center gap-3">
+                <div className={clsx('w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0',
+                  s.ok ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-600')}>
+                  {s.ok ? <HiOutlineCheck className="w-3 h-3" /> : <HiOutlineX className="w-3 h-3" />}
+                </div>
+                <div>
+                  <p className="text-sm text-surface-700">{s.label}</p>
+                  <p className="text-xs text-surface-400">{s.note}</p>
+                </div>
               </div>
-            </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Quick admin links */}
+      <div className="card p-5">
+        <p className="section-title mb-4">Admin tools</p>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          {[
+            { to:'/audit',     icon: HiOutlineShieldCheck, label: 'Audit Trail',     desc: 'All system events' },
+            { to:'/approvals', icon: HiOutlineUserGroup,   label: 'Approvals',       desc: `${pending ?? 0} pending` },
+            { to:'/users',     icon: HiOutlineUserGroup,   label: 'Manage Users',    desc: `${stats?.totalUsers ?? 0} users` },
+            { to:'/settings',  icon: HiOutlineCog,         label: 'System Settings', desc: 'Configure DocVault' },
+          ].map(l => (
+            <Link key={l.to} to={l.to} className="flex flex-col items-center gap-2 p-4 rounded-xl border border-surface-200 hover:border-primary-300 hover:bg-primary-50 transition-all text-center">
+              <l.icon className="w-6 h-6 text-primary-600" />
+              <div><p className="text-sm font-medium text-surface-800">{l.label}</p><p className="text-xs text-surface-400">{l.desc}</p></div>
+            </Link>
           ))}
         </div>
       </div>

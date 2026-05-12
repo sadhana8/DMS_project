@@ -3,20 +3,19 @@ import { useParams, useNavigate, Link } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { documentsApi } from '@/api/documents'
 import { useAuth } from '@/context/AuthContext'
-import { formatFileSize, formatDateTime, timeAgo, getErrorMessage } from '@/utils/helpers'
+import { formatFileSize, formatDateTime, timeAgo, getRoleBadge, getErrorMessage } from '@/utils/helpers'
 import FileIcon from '@/components/common/FileIcon'
 import Spinner from '@/components/common/Spinner'
-import { StatusBadge, Avatar } from '@/components/common/index'
+import { ConfirmDialog, StatusBadge, Avatar } from '@/components/common/index'
 import DocumentPreview from '@/components/documents/DocumentPreview'
 import VersionHistory from '@/components/documents/VersionHistory'
 import ShareModal from '@/components/documents/ShareModal'
 import toast from 'react-hot-toast'
 import clsx from 'clsx'
 import {
-  HiOutlineArrowLeft, HiOutlineDownload, HiOutlineArchive,
-  HiOutlineShare, HiOutlinePencil, HiOutlineClock,
-  HiOutlineTag, HiOutlineUser, HiOutlineDocumentText,
-  HiOutlineCheckCircle, HiOutlineRefresh,
+  HiOutlineArrowLeft, HiOutlineDownload, HiOutlineTrash, HiOutlineShare,
+  HiOutlinePencil, HiOutlineClock, HiOutlineTag, HiOutlineUser,
+  HiOutlineDocumentText, HiOutlineCheckCircle,
 } from 'react-icons/hi'
 
 const TABS = ['Preview','Versions','Details']
@@ -29,9 +28,8 @@ export default function DocumentDetail() {
 
   const [tab,        setTab]       = useState('Preview')
   const [shareOpen,  setShareOpen] = useState(false)
-  const [deprOpen,   setDeprOpen]  = useState(false)
-  const [deprReason, setDeprReason]= useState('')
-  const [deprLoading,setDeprLoading]=useState(false)
+  const [deleteOpen, setDeleteOpen]= useState(false)
+  const [deleting,   setDeleting]  = useState(false)
   const [editing,    setEditing]   = useState(false)
   const [editTitle,  setEditTitle] = useState('')
   const [editDesc,   setEditDesc]  = useState('')
@@ -42,8 +40,7 @@ export default function DocumentDetail() {
   })
 
   const startEdit = () => { setEditTitle(doc.title); setEditDesc(doc.description ?? ''); setEditing(true) }
-
-  const saveEdit = async () => {
+  const saveEdit  = async () => {
     try {
       await documentsApi.update(id, { title: editTitle, description: editDesc })
       qc.invalidateQueries({ queryKey: ['document', id] })
@@ -52,26 +49,15 @@ export default function DocumentDetail() {
     } catch (e) { toast.error(getErrorMessage(e)) }
   }
 
-  const handleDeprecate = async () => {
-    setDeprLoading(true)
+  const handleDelete = async () => {
+    setDeleting(true)
     try {
-      await documentsApi.deprecate(id, deprReason)
+      await documentsApi.delete(id)
       qc.invalidateQueries({ queryKey: ['documents'] })
-      toast.success('Document deprecated — can be restored by an admin')
+      toast.success('Document moved to archive')
       navigate('/documents')
-    } catch (e) {
-      toast.error(getErrorMessage(e))
-      setDeprLoading(false)
-    }
-  }
-
-  const handleRestore = async () => {
-    try {
-      await documentsApi.restore(id)
-      qc.invalidateQueries({ queryKey: ['document', id] })
-      qc.invalidateQueries({ queryKey: ['documents'] })
-      toast.success('Document restored!')
     } catch (e) { toast.error(getErrorMessage(e)) }
+    finally { setDeleting(false) }
   }
 
   if (isLoading) return <div className="flex justify-center py-20"><Spinner size="lg" /></div>
@@ -84,6 +70,7 @@ export default function DocumentDetail() {
 
   return (
     <div className="animate-fade-in max-w-6xl mx-auto">
+      {/* Breadcrumb */}
       <div className="flex items-center gap-2 text-sm text-surface-500 mb-4">
         <Link to="/documents" className="hover:text-surface-800 flex items-center gap-1">
           <HiOutlineArrowLeft className="w-4 h-4" /> Documents
@@ -92,6 +79,7 @@ export default function DocumentDetail() {
         <span className="text-surface-800 font-medium truncate max-w-xs">{doc.title}</span>
       </div>
 
+      {/* Header */}
       <div className="card p-5 mb-5">
         <div className="flex items-start gap-4">
           <FileIcon mimeType={doc.mimeType} fileName={doc.originalFileName} size="lg" />
@@ -118,8 +106,10 @@ export default function DocumentDetail() {
               </>
             )}
           </div>
+
+          {/* Actions */}
           {!editing && (
-            <div className="flex items-center gap-2 flex-shrink-0 flex-wrap justify-end">
+            <div className="flex items-center gap-2 flex-shrink-0">
               <button onClick={() => documentsApi.download(doc.id, doc.originalFileName)} className="btn-secondary btn-sm gap-1.5">
                 <HiOutlineDownload className="w-4 h-4" /> Download
               </button>
@@ -129,21 +119,17 @@ export default function DocumentDetail() {
                     <HiOutlineShare className="w-4 h-4" /> Share
                   </button>
                   <button onClick={startEdit} className="btn-ghost p-2 rounded-lg"><HiOutlinePencil className="w-4 h-4" /></button>
-                  <button onClick={() => setDeprOpen(true)} className="btn-ghost p-2 rounded-lg text-amber-500 hover:text-amber-700 hover:bg-amber-50" title="Deprecate">
-                    <HiOutlineArchive className="w-4 h-4" />
+                  <button onClick={() => setDeleteOpen(true)} className="btn-ghost p-2 rounded-lg text-red-400 hover:text-red-600 hover:bg-red-50">
+                    <HiOutlineTrash className="w-4 h-4" />
                   </button>
                 </>
-              )}
-              {isAdmin() && (
-                <button onClick={handleRestore} className="btn-ghost p-2 rounded-lg text-green-600 hover:bg-green-50" title="Restore deprecated document">
-                  <HiOutlineRefresh className="w-4 h-4" />
-                </button>
               )}
             </div>
           )}
         </div>
       </div>
 
+      {/* Tabs */}
       <div className="flex gap-1 border-b border-surface-200 mb-5">
         {TABS.map((t) => (
           <button key={t} onClick={() => setTab(t)}
@@ -154,55 +140,33 @@ export default function DocumentDetail() {
         ))}
       </div>
 
-      {tab === 'Preview'  && <DocumentPreview document={doc} />}
+      {/* Tab content */}
+      {tab === 'Preview' && <DocumentPreview document={doc} />}
       {tab === 'Versions' && <VersionHistory document={doc} />}
-      {tab === 'Details'  && <DetailsTab doc={doc} />}
+      {tab === 'Details' && <DetailsTab doc={doc} />}
 
       <ShareModal open={shareOpen} onClose={() => setShareOpen(false)} document={doc} />
-
-      {/* Deprecate modal */}
-      {deprOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/50" onClick={() => setDeprOpen(false)} />
-          <div className="relative bg-white rounded-2xl shadow-modal p-6 w-full max-w-md animate-slide-up">
-            <h2 className="text-lg font-semibold mb-1">Deprecate document</h2>
-            <p className="text-sm text-surface-500 mb-4">
-              This document will be hidden from all users. The file is preserved on disk and an admin can restore it at any time.
-            </p>
-            <label className="label">Reason (optional but recommended)</label>
-            <input
-              value={deprReason}
-              onChange={(e) => setDeprReason(e.target.value)}
-              placeholder="e.g. Superseded by v2, confidential content"
-              className="input mb-5"
-              autoFocus
-            />
-            <div className="flex gap-3 justify-end">
-              <button className="btn-secondary" onClick={() => { setDeprOpen(false); setDeprReason('') }}>Cancel</button>
-              <button
-                className="btn bg-amber-600 text-white hover:bg-amber-700 focus-visible:ring-amber-500 shadow-sm"
-                onClick={handleDeprecate} disabled={deprLoading}>
-                {deprLoading ? 'Deprecating…' : 'Deprecate document'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ConfirmDialog
+        open={deleteOpen} onClose={() => setDeleteOpen(false)}
+        onConfirm={handleDelete} loading={deleting}
+        title="Delete document"
+        message={`Are you sure you want to delete "${doc.title}"? This action cannot be undone.`}
+      />
     </div>
   )
 }
 
 function DetailsTab({ doc }) {
   const rows = [
-    { label: 'Owner',        value: `${doc.owner?.firstName} ${doc.owner?.lastName}`, icon: HiOutlineUser },
-    { label: 'File name',    value: doc.originalFileName,                              icon: HiOutlineDocumentText },
-    { label: 'File size',    value: formatFileSize(doc.fileSize),                      icon: HiOutlineDocumentText },
-    { label: 'MIME type',    value: doc.mimeType,                                      icon: HiOutlineDocumentText },
-    { label: 'Uploaded',     value: formatDateTime(doc.createdAt),                     icon: HiOutlineClock },
-    { label: 'Last updated', value: formatDateTime(doc.updatedAt),                     icon: HiOutlineClock },
-    { label: 'Tags',         value: doc.tags || '—',                                   icon: HiOutlineTag },
-    { label: 'Downloads',    value: doc.downloadCount ?? 0,                            icon: HiOutlineDownload },
-    { label: 'Views',        value: doc.viewCount ?? 0,                                icon: HiOutlineDocumentText },
+    { label: 'Owner',       value: `${doc.owner?.firstName} ${doc.owner?.lastName}`, icon: HiOutlineUser },
+    { label: 'File name',   value: doc.originalFileName,                              icon: HiOutlineDocumentText },
+    { label: 'File size',   value: formatFileSize(doc.fileSize),                      icon: HiOutlineDocumentText },
+    { label: 'MIME type',   value: doc.mimeType,                                      icon: HiOutlineDocumentText },
+    { label: 'Uploaded',    value: formatDateTime(doc.createdAt),                     icon: HiOutlineClock },
+    { label: 'Last updated',value: formatDateTime(doc.updatedAt),                     icon: HiOutlineClock },
+    { label: 'Tags',        value: doc.tags || '—',                                   icon: HiOutlineTag },
+    { label: 'Downloads',   value: doc.downloadCount ?? 0,                            icon: HiOutlineDownload },
+    { label: 'Views',       value: doc.viewCount ?? 0,                                icon: HiOutlineDocumentText },
   ]
   return (
     <div className="card">

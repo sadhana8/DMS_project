@@ -1,184 +1,179 @@
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
-import { yupResolver } from '@hookform/resolvers/yup'
-import * as yup from 'yup'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@/context/AuthContext'
 import { usersApi } from '@/api/users'
-import { authApi } from '@/api/auth'
-import { getRoleBadge, formatDateTime, getErrorMessage } from '@/utils/helpers'
-import { Avatar } from '@/components/common/index'
+import { notificationsApi } from '@/api/notifications'
 import Spinner from '@/components/common/Spinner'
 import toast from 'react-hot-toast'
 import clsx from 'clsx'
-import { HiOutlineUser, HiOutlineLockClosed, HiOutlineShieldCheck } from 'react-icons/hi'
+import { HiOutlineUser, HiOutlineShieldCheck, HiOutlineBell, HiOutlineEye, HiOutlineEyeOff } from 'react-icons/hi'
 
-const profileSchema = yup.object({
-  firstName:   yup.string().required('Required'),
-  lastName:    yup.string().required('Required'),
-  phoneNumber: yup.string().nullable(),
-})
-
-const pwSchema = yup.object({
-  currentPassword:    yup.string().required('Required'),
-  newPassword:        yup.string().min(8, 'Min 8 characters').required('Required'),
-  confirmNewPassword: yup.string().oneOf([yup.ref('newPassword')], 'Passwords do not match').required('Required'),
-})
-
-const TABS = [
-  { id: 'profile',  label: 'Profile',   icon: HiOutlineUser },
-  { id: 'security', label: 'Security',  icon: HiOutlineLockClosed },
-  { id: 'roles',    label: 'Roles',     icon: HiOutlineShieldCheck },
-]
+function Toggle({ checked, onChange }) {
+  return (
+    <button type="button" onClick={() => onChange(!checked)}
+      className={`toggle ${checked ? 'toggle-on' : 'toggle-off'}`}>
+      <span className={`toggle-thumb ${checked ? 'toggle-thumb-on' : 'toggle-thumb-off'}`} />
+    </button>
+  )
+}
 
 export default function ProfilePage() {
   const { user, refreshUser } = useAuth()
-  const qc   = useQueryClient()
-  const [tab, setTab] = useState('profile')
+  const qc = useQueryClient()
+  const [tab,     setTab]     = useState('profile')
+  const [showOld, setShowOld] = useState(false)
+  const [showNew, setShowNew] = useState(false)
 
-  // Profile form
-  const { register: regProf, handleSubmit: handleProf, formState: { errors: errProf, isSubmitting: subProf } } =
-    useForm({ resolver: yupResolver(profileSchema), defaultValues: { firstName: user?.firstName, lastName: user?.lastName, phoneNumber: user?.phoneNumber } })
+  const profileForm = useForm({ defaultValues: { firstName: user?.firstName ?? '', lastName: user?.lastName ?? '', phoneNumber: user?.phoneNumber ?? '' } })
+  const pwForm = useForm()
 
-  // Password form
-  const { register: regPw, handleSubmit: handlePw, reset: resetPw, formState: { errors: errPw, isSubmitting: subPw } } =
-    useForm({ resolver: yupResolver(pwSchema) })
+  const { data: notifSettings = [] } = useQuery({
+    queryKey: ['notif-settings'],
+    queryFn:  notificationsApi.getSettings,
+    enabled:  tab === 'notifications',
+  })
 
-  const updateProfile = async (data) => {
-    try {
-      await usersApi.updateProfile(data)
-      await refreshUser()
-      toast.success('Profile updated!')
-    } catch (e) { toast.error(getErrorMessage(e)) }
+  const onProfile = async (data) => {
+    try { await usersApi.updateProfile(data); await refreshUser(); toast.success('Profile updated') }
+    catch { toast.error('Failed to update profile') }
   }
 
-  const changePassword = async ({ currentPassword, newPassword }) => {
-    try {
-      await authApi.changePassword({ currentPassword, newPassword })
-      resetPw()
-      toast.success('Password changed!')
-    } catch (e) { toast.error(getErrorMessage(e)) }
+  const onPassword = async (data) => {
+    if (data.newPassword !== data.confirmPassword) { toast.error('Passwords do not match'); return }
+    try { await usersApi.changePassword?.(data) ?? toast.error('Not implemented'); pwForm.reset(); toast.success('Password changed') }
+    catch (e) { toast.error(e?.response?.data?.message ?? 'Failed') }
   }
+
+  const toggleNotif = async (type, channel, value) => {
+    try { await notificationsApi.updateSetting({ type, [channel]: value }); qc.invalidateQueries({ queryKey: ['notif-settings'] }) }
+    catch { toast.error('Failed to save') }
+  }
+
+  const TABS = [
+    { key: 'profile',       label: 'Profile',       icon: HiOutlineUser },
+    { key: 'security',      label: 'Security',       icon: HiOutlineShieldCheck },
+    { key: 'notifications', label: 'Notifications',  icon: HiOutlineBell },
+  ]
+
+  const initials = user ? `${user.firstName?.charAt(0) ?? ''}${user.lastName?.charAt(0) ?? ''}`.toUpperCase() : '?'
 
   return (
-    <div className="max-w-2xl mx-auto animate-fade-in">
-      <div className="mb-6">
-        <h1 className="page-title">Account Settings</h1>
-        <p className="page-subtitle">Manage your profile and security preferences</p>
-      </div>
-
-      {/* User card */}
-      <div className="card p-6 mb-6 flex items-center gap-4">
-        <Avatar user={user} size="xl" />
+    <div className="animate-fade-in max-w-2xl mx-auto">
+      {/* User header */}
+      <div className="card p-6 mb-5 flex items-center gap-4">
+        <div className="w-16 h-16 rounded-full bg-primary-100 text-primary-700 flex items-center justify-center text-xl font-bold flex-shrink-0">{initials}</div>
         <div>
-          <p className="text-lg font-semibold text-surface-900">{user?.firstName} {user?.lastName}</p>
+          <h1 className="text-xl font-semibold text-surface-900">{user?.firstName} {user?.lastName}</h1>
           <p className="text-sm text-surface-500">{user?.email}</p>
-          <div className="flex gap-1.5 mt-2 flex-wrap">
-            {user?.roles?.map(r => {
-              const { label, color } = getRoleBadge(r)
-              return <span key={r} className={color}>{label}</span>
-            })}
+          <div className="flex gap-1.5 mt-1.5">
+            {user?.roles?.map(r => <span key={r} className="badge badge-blue capitalize">{r.replace('ROLE_','').toLowerCase()}</span>)}
           </div>
         </div>
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 border-b border-surface-200 mb-6">
-        {TABS.map(({ id, label, icon: Icon }) => (
-          <button key={id} onClick={() => setTab(id)}
+      <div className="flex gap-1 border-b border-surface-200 mb-5">
+        {TABS.map(t => (
+          <button key={t.key} onClick={() => setTab(t.key)}
             className={clsx('flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors',
-              tab === id ? 'border-primary-600 text-primary-700' : 'border-transparent text-surface-500 hover:text-surface-800')}>
-            <Icon className="w-4 h-4" /> {label}
+              tab === t.key ? 'border-primary-600 text-primary-700' : 'border-transparent text-surface-500 hover:text-surface-800')}>
+            <t.icon className="w-4 h-4" />{t.label}
           </button>
         ))}
       </div>
 
       {/* Profile tab */}
       {tab === 'profile' && (
-        <div className="card p-6">
-          <h2 className="text-base font-semibold mb-5">Personal information</h2>
-          <form onSubmit={handleProf(updateProfile)} className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="label">First name</label>
-                <input {...regProf('firstName')} className="input" />
-                {errProf.firstName && <p className="mt-1 text-xs text-red-600">{errProf.firstName.message}</p>}
-              </div>
-              <div>
-                <label className="label">Last name</label>
-                <input {...regProf('lastName')} className="input" />
-                {errProf.lastName && <p className="mt-1 text-xs text-red-600">{errProf.lastName.message}</p>}
-              </div>
+        <form onSubmit={profileForm.handleSubmit(onProfile)} className="card p-6 space-y-4">
+          <h2 className="section-title">Personal information</h2>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="label">First name</label>
+              <input {...profileForm.register('firstName', { required: true })} className="input" />
             </div>
             <div>
-              <label className="label">Email address</label>
-              <input value={user?.email} disabled className="input" />
-              <p className="mt-1 text-xs text-surface-400">Email cannot be changed. Contact admin.</p>
+              <label className="label">Last name</label>
+              <input {...profileForm.register('lastName', { required: true })} className="input" />
             </div>
-            <div>
-              <label className="label">Phone number</label>
-              <input {...regProf('phoneNumber')} placeholder="+1 (555) 000-0000" className="input" />
-            </div>
-            <div className="pt-2">
-              <button type="submit" disabled={subProf} className="btn-primary">
-                {subProf ? <><Spinner size="sm" /> Saving…</> : 'Save changes'}
-              </button>
-            </div>
-          </form>
-        </div>
+          </div>
+          <div>
+            <label className="label">Email address</label>
+            <input value={user?.email ?? ''} disabled className="input" />
+            <p className="text-xs text-surface-400 mt-1">Email cannot be changed</p>
+          </div>
+          <div>
+            <label className="label">Phone number <span className="text-surface-400 font-normal">(optional)</span></label>
+            <input {...profileForm.register('phoneNumber')} placeholder="+977-9841234567" className="input" />
+          </div>
+          <div className="pt-2">
+            <button type="submit" disabled={profileForm.formState.isSubmitting} className="btn-primary gap-2">
+              {profileForm.formState.isSubmitting ? <><Spinner size="sm" /> Saving…</> : 'Save changes'}
+            </button>
+          </div>
+        </form>
       )}
 
       {/* Security tab */}
       {tab === 'security' && (
-        <div className="card p-6">
-          <h2 className="text-base font-semibold mb-5">Change password</h2>
-          <form onSubmit={handlePw(changePassword)} className="space-y-4">
+        <div className="space-y-5">
+          <form onSubmit={pwForm.handleSubmit(onPassword)} className="card p-6 space-y-4">
+            <h2 className="section-title">Change password</h2>
             <div>
               <label className="label">Current password</label>
-              <input {...regPw('currentPassword')} type="password" className="input" />
-              {errPw.currentPassword && <p className="mt-1 text-xs text-red-600">{errPw.currentPassword.message}</p>}
+              <div className="relative">
+                <input {...pwForm.register('currentPassword', { required: true })} type={showOld ? 'text' : 'password'} className="input pr-10" />
+                <button type="button" tabIndex={-1} onClick={() => setShowOld(v=>!v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-surface-400">
+                  {showOld ? <HiOutlineEyeOff className="w-4 h-4" /> : <HiOutlineEye className="w-4 h-4" />}
+                </button>
+              </div>
             </div>
             <div>
               <label className="label">New password</label>
-              <input {...regPw('newPassword')} type="password" placeholder="Min 8 characters" className="input" />
-              {errPw.newPassword && <p className="mt-1 text-xs text-red-600">{errPw.newPassword.message}</p>}
+              <div className="relative">
+                <input {...pwForm.register('newPassword', { required: true, minLength: 8 })} type={showNew ? 'text' : 'password'} placeholder="Min. 8 characters" className="input pr-10" />
+                <button type="button" tabIndex={-1} onClick={() => setShowNew(v=>!v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-surface-400">
+                  {showNew ? <HiOutlineEyeOff className="w-4 h-4" /> : <HiOutlineEye className="w-4 h-4" />}
+                </button>
+              </div>
             </div>
             <div>
               <label className="label">Confirm new password</label>
-              <input {...regPw('confirmNewPassword')} type="password" className="input" />
-              {errPw.confirmNewPassword && <p className="mt-1 text-xs text-red-600">{errPw.confirmNewPassword.message}</p>}
+              <input {...pwForm.register('confirmPassword', { required: true })} type="password" className="input" />
             </div>
-            <div className="pt-2">
-              <button type="submit" disabled={subPw} className="btn-primary">
-                {subPw ? <><Spinner size="sm" /> Updating…</> : 'Update password'}
-              </button>
-            </div>
+            <button type="submit" disabled={pwForm.formState.isSubmitting} className="btn-primary gap-2">
+              {pwForm.formState.isSubmitting ? <><Spinner size="sm" /> Changing…</> : 'Change password'}
+            </button>
           </form>
+          <div className="card p-6">
+            <h2 className="section-title mb-4">Active sessions</h2>
+            <div className="flex items-center justify-between p-3 bg-green-50 rounded-xl">
+              <div>
+                <p className="text-sm font-medium text-surface-800">Current session</p>
+                <p className="text-xs text-surface-400 mt-0.5">This browser · Active now</p>
+              </div>
+              <span className="badge badge-green">Active</span>
+            </div>
+          </div>
         </div>
       )}
 
-      {/* Roles tab */}
-      {tab === 'roles' && (
-        <div className="card p-6">
-          <h2 className="text-base font-semibold mb-5">My roles & permissions</h2>
-          <div className="space-y-3">
-            {user?.roles?.map(r => {
-              const { label, color } = getRoleBadge(r)
-              const descriptions = {
-                ROLE_ADMIN:   'Full system access — manage users, all documents, and system settings.',
-                ROLE_MANAGER: 'Can upload, share, approve documents, and manage team members.',
-                ROLE_EDITOR:  'Can upload, edit, and comment on documents.',
-                ROLE_VIEWER:  'Read-only access — can view and download documents.',
-              }
-              return (
-                <div key={r} className="flex items-start gap-3 p-4 rounded-xl bg-surface-50 border border-surface-100">
-                  <span className={clsx(color, 'mt-0.5')}>{label}</span>
-                  <p className="text-sm text-surface-600">{descriptions[r] ?? r}</p>
-                </div>
-              )
-            })}
+      {/* Notifications tab */}
+      {tab === 'notifications' && (
+        <div className="card overflow-hidden">
+          <div className="grid grid-cols-[1fr_auto_auto] items-center gap-4 px-5 py-3 bg-surface-50 border-b border-surface-200 text-xs font-semibold text-surface-500 uppercase tracking-wider">
+            <span>Event</span><span className="w-14 text-center">In-app</span><span className="w-14 text-center">Email</span>
           </div>
-          <p className="text-xs text-surface-400 mt-4">To change your roles, contact an administrator.</p>
+          {notifSettings.map((s, i) => (
+            <div key={s.type} className={`grid grid-cols-[1fr_auto_auto] items-center gap-4 px-5 py-3.5 ${i > 0 ? 'border-t border-surface-100' : ''}`}>
+              <div>
+                <p className="text-sm font-medium text-surface-800">{s.typeLabel}</p>
+                <p className="text-xs text-surface-400 mt-0.5">{s.description}</p>
+              </div>
+              <div className="w-14 flex justify-center"><Toggle checked={s.inApp ?? true} onChange={v => toggleNotif(s.type, 'inApp', v)} /></div>
+              <div className="w-14 flex justify-center"><Toggle checked={s.email ?? true} onChange={v => toggleNotif(s.type, 'email', v)} /></div>
+            </div>
+          ))}
         </div>
       )}
     </div>

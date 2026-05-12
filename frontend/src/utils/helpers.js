@@ -45,10 +45,10 @@ export const formatDateTime = (date) => format(new Date(date), 'MMM d, yyyy h:mm
 
 /* ── Role helpers ─────────────────────────────────────────── */
 export const ROLE_LABELS = {
-  ROLE_ADMIN:   { label: 'Admin',   color: 'badge-red'    },
-  ROLE_MANAGER: { label: 'Manager', color: 'badge-purple' },
-  ROLE_EDITOR:  { label: 'Editor',  color: 'badge-blue'   },
-  ROLE_VIEWER:  { label: 'Viewer',  color: 'badge-gray'   },
+  ROLE_ADMIN:    { label: 'Admin',    color: 'badge-red'    },
+  ROLE_HR:       { label: 'HR',       color: 'badge-purple' },
+  ROLE_ACCOUNT:  { label: 'Account',  color: 'badge-blue'   },
+  ROLE_EMPLOYEE: { label: 'Employee', color: 'badge-gray'   },
 }
 
 export const getRoleBadge = (role) =>

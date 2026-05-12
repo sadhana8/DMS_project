@@ -14,20 +14,27 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+import java.util.Map;
+
 /**
- * REST controller for user-profile and user-management operations.
+ * REST controller for user management.
  *
- * <p>
- * Base path: {@code /api/users}
- *
- * <h2>No hard deletion</h2>
- * The {@code DELETE /{id}} endpoint no longer exists. Use
- * {@code PUT /{id}/deprecate} instead to soft-deprecate a user account. The
- * account can be restored at any time via {@code PUT /{id}/restore}.
- *
- * @author DocVault Team
- * @version 1.0.0
- * @since 1.0.0
+ * <p>Endpoint summary:
+ * <ul>
+ *   <li>{@code GET  /api/users/me}                   – current user</li>
+ *   <li>{@code PUT  /api/users/profile}              – edit own profile</li>
+ *   <li>{@code GET  /api/users}                      – paged list (HR+)</li>
+ *   <li>{@code GET  /api/users/directory}            – compact "employee" list (HR+)</li>
+ *   <li>{@code GET  /api/users/deprecated}           – deprecated users (ADMIN)</li>
+ *   <li>{@code GET  /api/users/{id}}                 – single user (HR+)</li>
+ *   <li>{@code PUT  /api/users/{id}/roles}           – change roles (ADMIN)</li>
+ *   <li>{@code PUT  /api/users/{id}/activate}        – restore / activate (ADMIN)</li>
+ *   <li>{@code PUT  /api/users/{id}/deactivate}      – deprecate (ADMIN)</li>
+ *   <li>{@code POST /api/users/{id}/deprecate}       – deprecate with optional reason (ADMIN)</li>
+ *   <li>{@code POST /api/users/{id}/restore}         – restore (ADMIN)</li>
+ *   <li>{@code DELETE /api/users/{id}}               – permanent delete (ADMIN)</li>
+ * </ul>
  */
 @RestController
 @RequestMapping("/users")
@@ -36,11 +43,8 @@ public class UserController {
 
     private final UserServiceImpl userService;
     private final AuthServiceImpl authService;
-    private final UserRepository userRepository;
+    private final UserRepository  userRepository;
 
-    /**
-     * Returns the full profile of the currently authenticated user.
-     */
     @GetMapping("/me")
     public ResponseEntity<UserResponse> getCurrentUser(@AuthenticationPrincipal UserDetails ud) {
         var user = userRepository.findByEmail(ud.getUsername())
@@ -48,9 +52,6 @@ public class UserController {
         return ResponseEntity.ok(authService.mapUserToResponse(user));
     }
 
-    /**
-     * Updates the authenticated user's own profile (partial update).
-     */
     @PutMapping("/profile")
     public ResponseEntity<UserResponse> updateProfile(
             @AuthenticationPrincipal UserDetails ud,
@@ -58,45 +59,48 @@ public class UserController {
         return ResponseEntity.ok(userService.updateProfile(ud.getUsername(), request));
     }
 
-    /**
-     * Returns a paginated list of all <em>active</em> users. Deprecated users
-     * are excluded; use {@code GET /admin/deprecated/users} to see them.
-     *
-     * <p>
-     * {@code GET /api/users?page=0&size=10&search=alice}
-     */
     @GetMapping
-    @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
+    @PreAuthorize("hasAnyRole('ADMIN','HR')")
     public ResponseEntity<Page<UserResponse>> listUsers(
-            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "0")  int page,
             @RequestParam(defaultValue = "10") int size,
-            @RequestParam(required = false) String search) {
+            @RequestParam(required = false)    String search) {
         return ResponseEntity.ok(userService.listUsers(page, size, search));
     }
 
     /**
-     * Returns a single user's profile by ID.
+     * Compact list of all users, used by the audit-filter dropdown and the
+     * sharing autocomplete. Minimal payload, no paging.
      */
+    @GetMapping("/directory")
+    @PreAuthorize("hasAnyRole('ADMIN','HR')")
+    public ResponseEntity<List<Map<String, Object>>> directory() {
+        return ResponseEntity.ok(userService.directory());
+    }
+
+    @GetMapping("/deprecated")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Page<UserResponse>> listDeprecated(
+            @RequestParam(defaultValue = "0")  int page,
+            @RequestParam(defaultValue = "20") int size) {
+        return ResponseEntity.ok(userService.listDeprecated(page, size));
+    }
+
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
+    @PreAuthorize("hasAnyRole('ADMIN','HR')")
     public ResponseEntity<UserResponse> getUser(@PathVariable Long id) {
         return ResponseEntity.ok(userService.getUser(id));
     }
 
-    /**
-     * Replaces the complete set of roles assigned to a user.
-     */
     @PutMapping("/{id}/roles")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<UserResponse> updateRoles(
             @PathVariable Long id,
-            @RequestBody UpdateRolesRequest request) {
-        return ResponseEntity.ok(userService.updateRoles(id, request.getRoles()));
+            @RequestBody UpdateRolesRequest request,
+            @AuthenticationPrincipal UserDetails ud) {
+        return ResponseEntity.ok(userService.updateRoles(id, request.getRoles(), ud.getUsername()));
     }
 
-    /**
-     * Re-enables a temporarily deactivated user account.
-     */
     @PutMapping("/{id}/activate")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse> activate(@PathVariable Long id) {
@@ -104,9 +108,6 @@ public class UserController {
         return ResponseEntity.ok(ApiResponse.ok("User activated"));
     }
 
-    /**
-     * Temporarily disables login without deprecating the account.
-     */
     @PutMapping("/{id}/deactivate")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse> deactivate(@PathVariable Long id) {
@@ -114,52 +115,31 @@ public class UserController {
         return ResponseEntity.ok(ApiResponse.ok("User deactivated"));
     }
 
-    /**
-     * <b>Deprecates</b> a user — the safe, reversible alternative to deletion.
-     *
-     * <p>
-     * {@code PUT /api/users/{id}/deprecate}
-     *
-     * <p>
-     * The account is hidden from all standard queries, login is blocked, and
-     * all refresh tokens are revoked. All data (documents, permissions, audit
-     * history) is fully preserved. Use {@code PUT /{id}/restore} to undo.
-     *
-     * <p>
-     * Request body:
-     * <pre>{@code { "reason": "Left the organisation" }}</pre>
-     *
-     * @param id the user ID to deprecate
-     * @param request optional reason for the deprecation
-     * @param ud the authenticated admin user
-     * @return {@code 200 OK} with the updated {@link UserResponse}
-     */
-    @PutMapping("/{id}/deprecate")
+    @PostMapping("/{id}/deprecate")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<UserResponse> deprecateUser(
+    public ResponseEntity<ApiResponse> deprecate(
             @PathVariable Long id,
-            @RequestBody(required = false) DeprecateRequest request,
+            @RequestBody(required = false) DeprecateRequest req,
             @AuthenticationPrincipal UserDetails ud) {
-        String reason = request != null ? request.getReason() : null;
-        return ResponseEntity.ok(userService.deprecateUser(id, reason, ud.getUsername()));
+        userService.deprecate(id, req != null ? req.getReason() : null, ud.getUsername());
+        return ResponseEntity.ok(ApiResponse.ok("User deprecated"));
     }
 
-    /**
-     * <b>Restores</b> a deprecated user back to active status.
-     *
-     * <p>
-     * {@code PUT /api/users/{id}/restore}
-     *
-     * <p>
-     * Resets {@link com.dms.entity.DeprecationStatus} to ACTIVE, re-enables
-     * login, and clears all deprecation audit fields.
-     *
-     * @param id the user ID to restore
-     * @return {@code 200 OK} with the restored {@link UserResponse}
-     */
-    @PutMapping("/{id}/restore")
+    @PostMapping("/{id}/restore")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<UserResponse> restoreUser(@PathVariable Long id) {
-        return ResponseEntity.ok(userService.restoreUser(id));
+    public ResponseEntity<ApiResponse> restore(
+            @PathVariable Long id,
+            @AuthenticationPrincipal UserDetails ud) {
+        userService.restore(id, ud.getUsername());
+        return ResponseEntity.ok(ApiResponse.ok("User restored"));
+    }
+
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ApiResponse> deleteUser(
+            @PathVariable Long id,
+            @AuthenticationPrincipal UserDetails ud) {
+        userService.deleteUser(id, ud.getUsername());
+        return ResponseEntity.ok(ApiResponse.ok("User permanently deleted"));
     }
 }

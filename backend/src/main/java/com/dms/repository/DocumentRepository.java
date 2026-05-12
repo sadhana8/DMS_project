@@ -11,84 +11,69 @@ import org.springframework.stereotype.Repository;
 
 import java.util.List;
 
-/**
- * Spring Data JPA repository for {@link Document} entities.
- *
- * <p>
- * All standard queries filter on {@code deprecation_status = 'ACTIVE'}.
- * Deprecated documents are excluded from normal results and only appear through
- * the admin deprecated-documents endpoints.
- *
- * @author DocVault Team
- * @version 1.0.0
- * @since 1.0.0
- */
 @Repository
 public interface DocumentRepository extends JpaRepository<Document, Long> {
 
-    /**
-     * Returns all non-deprecated documents the user is permitted to access.
-     *
-     * @param user the requesting {@link User}
-     * @param pageable pagination and sorting
-     * @return a page of accessible, active documents
-     */
-    @Query("SELECT d FROM Document d WHERE d.deprecationStatus = 'ACTIVE' AND "
-            + "(d.owner = :user OR d.isPublic = true OR "
-            + "EXISTS (SELECT p FROM DocumentPermission p WHERE p.document = d AND p.user = :user))")
+    Page<Document> findByOwner(User owner, Pageable pageable);
+
+    @Query("SELECT d FROM Document d WHERE d.owner = :owner AND d.status != 'DELETED'")
+    Page<Document> findActiveByOwner(@Param("owner") User owner, Pageable pageable);
+
+    @Query("SELECT d FROM Document d WHERE " +
+           "(d.owner = :user OR d.isPublic = true OR " +
+           "EXISTS (SELECT p FROM DocumentPermission p WHERE p.document = d AND p.user = :user)) " +
+           "AND d.status != 'DELETED'")
     Page<Document> findAccessibleByUser(@Param("user") User user, Pageable pageable);
 
-    /**
-     * Full-text search restricted to non-deprecated, accessible documents.
-     *
-     * @param query search term (partial, case-insensitive)
-     * @param user the requesting user
-     * @param pageable pagination and sorting
-     * @return matching accessible documents
-     */
-    @Query("SELECT d FROM Document d WHERE d.deprecationStatus = 'ACTIVE' AND "
-            + "(d.owner = :user OR d.isPublic = true OR "
-            + "EXISTS (SELECT p FROM DocumentPermission p WHERE p.document = d AND p.user = :user)) AND "
-            + "(LOWER(d.title)       LIKE LOWER(CONCAT('%', :query, '%')) OR "
-            + " LOWER(d.description) LIKE LOWER(CONCAT('%', :query, '%')) OR "
-            + " LOWER(d.tags)        LIKE LOWER(CONCAT('%', :query, '%')))")
-    Page<Document> searchDocuments(@Param("query") String query,
-            @Param("user") User user,
-            Pageable pageable);
+    @Query("SELECT d FROM Document d WHERE " +
+           "(d.owner = :user OR d.isPublic = true OR " +
+           "EXISTS (SELECT p FROM DocumentPermission p WHERE p.document = d AND p.user = :user)) " +
+           "AND d.status != 'DELETED' AND " +
+           "(LOWER(d.title) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
+           "LOWER(d.description) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
+           "LOWER(d.tags) LIKE LOWER(CONCAT('%', :query, '%')))")
+    Page<Document> searchDocuments(@Param("query") String query, @Param("user") User user, Pageable pageable);
 
-    /**
-     * Returns all non-deprecated documents (admin view).
-     *
-     * @param pageable pagination and sorting
-     * @return all active documents
-     */
-    @Query("SELECT d FROM Document d WHERE d.deprecationStatus = 'ACTIVE'")
+    @Query("SELECT d FROM Document d WHERE d.status != 'DELETED'")
     Page<Document> findAllActive(Pageable pageable);
 
-    /**
-     * Returns all deprecated documents (admin view).
-     *
-     * @param pageable pagination and sorting
-     * @return deprecated documents ordered by deprecation date descending
-     */
-    @Query("SELECT d FROM Document d WHERE d.deprecationStatus = 'DEPRECATED' ORDER BY d.deprecatedAt DESC")
-    Page<Document> findAllDeprecated(Pageable pageable);
-
-    /**
-     * Count of non-deprecated documents.
-     */
-    @Query("SELECT COUNT(d) FROM Document d WHERE d.deprecationStatus = 'ACTIVE'")
+    @Query("SELECT COUNT(d) FROM Document d WHERE d.status <> 'DELETED' AND d.status <> 'ARCHIVED'")
     long countActiveDocuments();
 
-    /**
-     * Sum of file sizes for non-deprecated documents.
-     */
-    @Query("SELECT SUM(d.fileSize) FROM Document d WHERE d.deprecationStatus = 'ACTIVE'")
+    @Query("SELECT SUM(d.fileSize) FROM Document d WHERE d.status <> 'DELETED' AND d.status <> 'ARCHIVED'")
     Long getTotalStorageUsed();
 
-    /**
-     * Most recent non-deprecated documents, newest first.
-     */
-    @Query("SELECT d FROM Document d WHERE d.deprecationStatus = 'ACTIVE' ORDER BY d.createdAt DESC")
+    /** Count documents (non-deleted, non-archived) inside a folder. */
+    @Query("SELECT COUNT(d) FROM Document d WHERE d.folder.id = :folderId " +
+           "AND d.status <> 'DELETED' AND d.status <> 'ARCHIVED'")
+    long countByFolderId(@Param("folderId") Long folderId);
+
+    @Query("SELECT d FROM Document d WHERE d.status != 'DELETED' AND d.status != 'ARCHIVED' ORDER BY d.createdAt DESC")
     List<Document> findRecentDocuments(Pageable pageable);
+
+    /** Documents inside a given folder (excluding deleted/archived). */
+    @Query("SELECT d FROM Document d WHERE d.folder.id = :folderId " +
+           "AND d.status <> 'DELETED' AND d.status <> 'ARCHIVED'")
+    Page<Document> findByFolderId(@Param("folderId") Long folderId, Pageable pageable);
+
+    /** Documents that have been soft-deprecated (ARCHIVED) — admin listing. */
+    @Query("SELECT d FROM Document d WHERE d.status = 'ARCHIVED' ORDER BY d.updatedAt DESC")
+    Page<Document> findDeprecated(Pageable pageable);
+
+    /** Count of documents created since the given timestamp. */
+    @Query("SELECT COUNT(d) FROM Document d WHERE d.status <> 'DELETED' AND d.createdAt >= :since")
+    long countCreatedSince(@Param("since") java.time.LocalDateTime since);
+
+    /** Count of documents owned by a specific user (excluding deleted). */
+    @Query("SELECT COUNT(d) FROM Document d WHERE d.owner = :owner AND d.status <> 'DELETED'")
+    long countByOwner(@Param("owner") User owner);
+
+    /** Storage bytes used by a specific user. */
+    @Query("SELECT COALESCE(SUM(d.fileSize), 0) FROM Document d WHERE d.owner = :owner AND d.status <> 'DELETED'")
+    long getStorageUsedBy(@Param("owner") User owner);
+
+    /** Group documents by extension for the storage-breakdown dashboard widget. */
+    @Query("SELECT COALESCE(d.fileType, 'OTHER') AS type, COUNT(d), COALESCE(SUM(d.fileSize), 0) " +
+           "FROM Document d WHERE d.status <> 'DELETED' GROUP BY d.fileType")
+    List<Object[]> groupByFileType();
 }

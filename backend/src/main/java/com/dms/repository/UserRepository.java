@@ -1,6 +1,5 @@
 package com.dms.repository;
 
-import com.dms.entity.DeprecationStatus;
 import com.dms.entity.User;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -11,93 +10,48 @@ import org.springframework.stereotype.Repository;
 
 import java.util.Optional;
 
-/**
- * Spring Data JPA repository for {@link User} entities.
- *
- * <p>
- * All standard list/search queries filter on
- * {@code deprecation_status = 'ACTIVE'} so deprecated users never appear in
- * normal results. Separate admin queries expose deprecated records.
- *
- * @author DocVault Team
- * @version 1.0.0
- * @since 1.0.0
- */
 @Repository
 public interface UserRepository extends JpaRepository<User, Long> {
 
-    /**
-     * Finds an active (non-deprecated) user by e-mail. Used by
-     * {@link com.dms.security.CustomUserDetailsService}.
-     *
-     * @param email the e-mail address to search for
-     * @return an {@link Optional} containing the active user, or empty if not
-     * found
-     */
-    Optional<User> findByEmailAndDeprecationStatus(String email, DeprecationStatus status);
-
-    /**
-     * Finds any user by e-mail regardless of deprecation status. Used
-     * internally for deprecation and restore operations.
-     *
-     * @param email the e-mail address to search for
-     * @return an {@link Optional} containing the user (active or deprecated)
-     */
     Optional<User> findByEmail(String email);
 
-    /**
-     * Finds any user by username regardless of deprecation status.
-     *
-     * @param username the username to search for
-     * @return an {@link Optional} containing the user
-     */
     Optional<User> findByUsername(String username);
 
-    /**
-     * Returns {@code true} if any user (any status) has this e-mail.
-     */
     boolean existsByEmail(String email);
 
-    /**
-     * Returns {@code true} if any user (any status) has this username.
-     */
     boolean existsByUsername(String username);
 
-    /**
-     * Full-text search across active users only.
-     *
-     * @param query the search term (partial match, case-insensitive)
-     * @param pageable pagination and sorting
-     * @return a page of matching active users
-     */
-    @Query("SELECT u FROM User u WHERE u.deprecationStatus = 'ACTIVE' AND ("
+    @Query("SELECT u FROM User u WHERE "
             + "LOWER(u.firstName) LIKE LOWER(CONCAT('%', :query, '%')) OR "
-            + "LOWER(u.lastName)  LIKE LOWER(CONCAT('%', :query, '%')) OR "
-            + "LOWER(u.email)     LIKE LOWER(CONCAT('%', :query, '%')) OR "
-            + "LOWER(u.username)  LIKE LOWER(CONCAT('%', :query, '%')))")
-    Page<User> searchActiveUsers(@Param("query") String query, Pageable pageable);
+            + "LOWER(u.lastName) LIKE LOWER(CONCAT('%', :query, '%')) OR "
+            + "LOWER(u.email) LIKE LOWER(CONCAT('%', :query, '%')) OR "
+            + "LOWER(u.username) LIKE LOWER(CONCAT('%', :query, '%'))")
+    Page<User> searchUsers(String query, Pageable pageable);
 
-    /**
-     * Returns all active users, paginated.
-     *
-     * @param pageable pagination and sorting
-     * @return page of active users
-     */
-    Page<User> findByDeprecationStatus(DeprecationStatus status, Pageable pageable);
-
-    /**
-     * Returns all deprecated users (admin view).
-     *
-     * @param pageable pagination and sorting
-     * @return page of deprecated users
-     */
-    @Query("SELECT u FROM User u WHERE u.deprecationStatus = 'DEPRECATED' ORDER BY u.deprecatedAt DESC")
-    Page<User> findAllDeprecated(Pageable pageable);
-
-    /**
-     * Count of users with {@code deprecationStatus = ACTIVE} and
-     * {@code isActive = true}.
-     */
-    @Query("SELECT COUNT(u) FROM User u WHERE u.deprecationStatus = 'ACTIVE' AND u.isActive = true")
+    @Query("SELECT COUNT(u) FROM User u WHERE u.isActive = true")
     long countActiveUsers();
+
+    /**
+     * Paged list of deprecated (inactive) users — admin only.
+     */
+    Page<User> findByIsActiveFalse(Pageable pageable);
+
+    /**
+     * Lightweight list used for the audit-trail user filter (aka "employees").
+     */
+    @Query("SELECT u FROM User u ORDER BY u.firstName ASC, u.lastName ASC")
+    java.util.List<User> findAllForDirectory();
+
+    /**
+     * Count of users created since a given timestamp.
+     */
+    @Query("SELECT COUNT(u) FROM User u WHERE u.createdAt >= :since")
+    long countCreatedSince(@Param("since") java.time.LocalDateTime since);
+
+    /**
+     * All active users that hold a specific role (e.g. ROLE_ADMIN) — used to
+     * fan-out notifications.
+     */
+    @Query("SELECT u FROM User u JOIN u.roles r WHERE r.name = :role AND u.isActive = true")
+    java.util.List<User> findAllActiveByRole(@Param("role") com.dms.entity.RoleName role);
 }

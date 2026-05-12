@@ -11,36 +11,33 @@ import clsx from 'clsx'
 import {
   HiOutlineSearch, HiOutlineUsers, HiOutlineShieldCheck,
   HiOutlineBan, HiOutlineCheckCircle, HiOutlineArchive,
-  HiOutlineRefresh,
+  HiOutlineRefresh, HiOutlineFilter,
 } from 'react-icons/hi'
 
-const ALL_ROLES = ['ROLE_ADMIN','ROLE_MANAGER','ROLE_EDITOR','ROLE_VIEWER']
-const PAGE_SIZE = 10
+const ALL_ROLES = ['ROLE_ADMIN','ROLE_HR','ROLE_ACCOUNT','ROLE_EMPLOYEE']
 
 export default function UsersPage() {
   const qc = useQueryClient()
   const { user: me, isAdmin } = useAuth()
-  const [page,          setPage]          = useState(1)
-  const [search,        setSearch]        = useState('')
-  const [showDeprecated,setShowDeprecated]= useState(false)
-  const [roleModal,     setRoleModal]     = useState(null)
-  const [deprUser,      setDeprUser]      = useState(null)
-  const [deprReason,    setDeprReason]    = useState('')
-  const [deprLoading,   setDeprLoading]   = useState(false)
-  const [selectedRoles, setSelectedRoles] = useState([])
+  const [page,           setPage]           = useState(1)
+  const [search,         setSearch]         = useState('')
+  const [showDeprecated, setShowDeprecated] = useState(false)
+  const [roleModal,      setRoleModal]      = useState(null)
+  const [deprUser,       setDeprUser]       = useState(null)
+  const [deprReason,     setDeprReason]     = useState('')
+  const [deprLoading,    setDeprLoading]    = useState(false)
+  const [selectedRoles,  setSelectedRoles]  = useState([])
 
   const { data, isLoading } = useQuery({
     queryKey: showDeprecated ? ['users-deprecated', page] : ['users', page, search],
-    queryFn: showDeprecated
-      ? () => usersApi.listDeprecated({ page: page - 1, size: PAGE_SIZE })
-      : () => usersApi.list({ page: page - 1, size: PAGE_SIZE, search: search || undefined }),
+    queryFn:  showDeprecated
+      ? () => usersApi.listDeprecated({ page: page - 1, size: 10 })
+      : () => usersApi.list({ page: page - 1, size: 10, search: search || undefined }),
   })
 
   const users      = data?.content ?? []
   const totalPages = data?.totalPages ?? 1
   const total      = data?.totalElements ?? 0
-
-  const openRoleModal = (user) => { setRoleModal(user); setSelectedRoles(user.roles ?? []) }
 
   const saveRoles = async () => {
     try {
@@ -51,12 +48,11 @@ export default function UsersPage() {
     } catch (e) { toast.error(getErrorMessage(e)) }
   }
 
-  const toggleStatus = async (user) => {
+  const toggleActive = async (u) => {
     try {
-      if (user.isActive) await usersApi.deactivate(user.id)
-      else               await usersApi.activate(user.id)
+      u.isActive ? await usersApi.deactivate(u.id) : await usersApi.activate(u.id)
       qc.invalidateQueries({ queryKey: ['users'] })
-      toast.success(`User ${user.isActive ? 'deactivated' : 'activated'}`)
+      toast.success(`User ${u.isActive ? 'deactivated' : 'activated'}`)
     } catch (e) { toast.error(getErrorMessage(e)) }
   }
 
@@ -66,23 +62,19 @@ export default function UsersPage() {
       await usersApi.deprecate(deprUser.id, deprReason)
       qc.invalidateQueries({ queryKey: ['users'] })
       toast.success('User deprecated — can be restored at any time')
-      setDeprUser(null)
-      setDeprReason('')
+      setDeprUser(null); setDeprReason('')
     } catch (e) { toast.error(getErrorMessage(e)) }
     finally { setDeprLoading(false) }
   }
 
-  const handleRestore = async (user) => {
+  const handleRestore = async (u) => {
     try {
-      await usersApi.restore(user.id)
+      await usersApi.restore(u.id)
       qc.invalidateQueries({ queryKey: ['users'] })
       qc.invalidateQueries({ queryKey: ['users-deprecated'] })
-      toast.success(`${user.firstName} restored successfully`)
+      toast.success(`${u.firstName} restored successfully`)
     } catch (e) { toast.error(getErrorMessage(e)) }
   }
-
-  const toggleRole = (role) =>
-    setSelectedRoles(prev => prev.includes(role) ? prev.filter(r => r !== role) : [...prev, role])
 
   return (
     <div className="animate-fade-in">
@@ -92,11 +84,10 @@ export default function UsersPage() {
           <p className="page-subtitle">{total} user{total !== 1 ? 's' : ''}</p>
         </div>
         {isAdmin() && (
-          <button
-            onClick={() => { setShowDeprecated(v => !v); setPage(1) }}
+          <button onClick={() => { setShowDeprecated(v => !v); setPage(1) }}
             className={clsx('btn-secondary gap-2', showDeprecated && 'border-amber-300 text-amber-700 bg-amber-50')}>
             <HiOutlineArchive className="w-4 h-4" />
-            {showDeprecated ? 'Show active users' : 'View deprecated'}
+            {showDeprecated ? 'Show active' : 'View deprecated'}
           </button>
         )}
       </div>
@@ -104,12 +95,8 @@ export default function UsersPage() {
       {!showDeprecated && (
         <div className="relative mb-5 max-w-md">
           <HiOutlineSearch className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-surface-400" />
-          <input
-            value={search}
-            onChange={(e) => { setSearch(e.target.value); setPage(1) }}
-            placeholder="Search by name, email, username…"
-            className="input pl-9"
-          />
+          <input value={search} onChange={e => { setSearch(e.target.value); setPage(1) }}
+            placeholder="Search by name, email, username…" className="input pl-9" />
         </div>
       )}
 
@@ -128,74 +115,70 @@ export default function UsersPage() {
                 <th>User</th>
                 <th>Roles</th>
                 <th>Status</th>
-                {showDeprecated && <th>Deprecated</th>}
-                {!showDeprecated && <th>Last login</th>}
+                {showDeprecated ? <th>Reason</th> : <th>Last login</th>}
                 <th>Joined</th>
                 {isAdmin() && <th className="text-right">Actions</th>}
               </tr>
             </thead>
             <tbody>
-              {users.map((user) => (
-                <tr key={user.id}>
+              {users.map(u => (
+                <tr key={u.id}>
                   <td>
                     <div className="flex items-center gap-3">
-                      <Avatar user={user} size="md" />
+                      <div className="w-8 h-8 rounded-full bg-primary-100 text-primary-700 flex items-center justify-center text-xs font-bold flex-shrink-0">
+                        {u.firstName?.charAt(0)}{u.lastName?.charAt(0)}
+                      </div>
                       <div>
                         <p className="text-sm font-medium text-surface-800">
-                          {user.firstName} {user.lastName}
-                          {user.id === me?.id && <span className="text-xs text-surface-400 ml-1">(you)</span>}
+                          {u.firstName} {u.lastName}
+                          {u.id === me?.id && <span className="text-xs text-surface-400 ml-1">(you)</span>}
                         </p>
-                        <p className="text-xs text-surface-400">{user.email}</p>
+                        <p className="text-xs text-surface-400">{u.email}</p>
                       </div>
                     </div>
                   </td>
                   <td>
                     <div className="flex flex-wrap gap-1">
-                      {(user.roles ?? []).map(r => {
-                        const { label, color } = getRoleBadge(r)
-                        return <span key={r} className={color}>{label}</span>
+                      {(u.roles ?? []).map(r => {
+                        const b = getRoleBadge(r)
+                        return <span key={r} className={b.color}>{b.label}</span>
                       })}
                     </div>
                   </td>
                   <td>
-                    <span className={clsx('badge', user.isActive ? 'badge-green' : 'badge-red')}>
-                      {user.isActive ? 'Active' : 'Inactive'}
+                    <span className={clsx('badge', u.isActive ? 'badge-green' : 'badge-red')}>
+                      {u.isActive ? 'Active' : 'Inactive'}
                     </span>
                   </td>
-                  {showDeprecated && (
-                    <td>
-                      <div className="text-xs text-surface-500">
-                        <div>{user.deprecationReason || '—'}</div>
-                        <div className="text-surface-400">by {user.deprecatedBy}</div>
-                      </div>
-                    </td>
-                  )}
-                  {!showDeprecated && (
-                    <td className="text-xs text-surface-500">
-                      {user.lastLogin ? timeAgo(user.lastLogin) : 'Never'}
-                    </td>
-                  )}
-                  <td className="text-xs text-surface-500">{timeAgo(user.createdAt)}</td>
+                  {showDeprecated
+                    ? <td className="text-xs text-surface-500">{u.deprecationReason || '—'}</td>
+                    : <td className="text-xs text-surface-500">{u.lastLogin ? timeAgo(u.lastLogin) : 'Never'}</td>
+                  }
+                  <td className="text-xs text-surface-500">{timeAgo(u.createdAt)}</td>
                   {isAdmin() && (
                     <td>
                       <div className="flex items-center justify-end gap-1">
                         {showDeprecated ? (
-                          <button onClick={() => handleRestore(user)} className="btn-ghost p-1.5 rounded-lg text-green-600 hover:bg-green-50" title="Restore user">
+                          <button onClick={() => handleRestore(u)} title="Restore user"
+                            className="btn-ghost p-1.5 rounded-lg text-green-600 hover:bg-green-50">
                             <HiOutlineRefresh className="w-4 h-4" />
                           </button>
                         ) : (
                           <>
-                            <button onClick={() => openRoleModal(user)} className="btn-ghost p-1.5 rounded-lg" title="Edit roles">
+                            <button onClick={() => { setRoleModal(u); setSelectedRoles(u.roles ?? []) }}
+                              title="Edit roles" className="btn-ghost p-1.5 rounded-lg">
                               <HiOutlineShieldCheck className="w-4 h-4 text-primary-500" />
                             </button>
-                            {user.id !== me?.id && (
+                            {u.id !== me?.id && (
                               <>
-                                <button onClick={() => toggleStatus(user)} className="btn-ghost p-1.5 rounded-lg" title={user.isActive ? 'Deactivate' : 'Activate'}>
-                                  {user.isActive
+                                <button onClick={() => toggleActive(u)} title={u.isActive ? 'Deactivate' : 'Activate'}
+                                  className="btn-ghost p-1.5 rounded-lg">
+                                  {u.isActive
                                     ? <HiOutlineBan className="w-4 h-4 text-yellow-500" />
                                     : <HiOutlineCheckCircle className="w-4 h-4 text-green-500" />}
                                 </button>
-                                <button onClick={() => setDeprUser(user)} className="btn-ghost p-1.5 rounded-lg text-amber-500 hover:text-amber-700 hover:bg-amber-50" title="Deprecate user">
+                                <button onClick={() => setDeprUser(u)} title="Deprecate user"
+                                  className="btn-ghost p-1.5 rounded-lg text-amber-500 hover:bg-amber-50">
                                   <HiOutlineArchive className="w-4 h-4" />
                                 </button>
                               </>
@@ -214,21 +197,19 @@ export default function UsersPage() {
 
       <Pagination page={page} totalPages={totalPages} onChange={setPage} />
 
-      {/* Role editor modal */}
+      {/* Role editor */}
       <Modal open={!!roleModal} onClose={() => setRoleModal(null)} title={`Edit roles — ${roleModal?.firstName}`} size="sm"
-        footer={<>
-          <button className="btn-secondary" onClick={() => setRoleModal(null)}>Cancel</button>
-          <button className="btn-primary" onClick={saveRoles}>Save roles</button>
-        </>}>
+        footer={<><button className="btn-secondary" onClick={() => setRoleModal(null)}>Cancel</button><button className="btn-primary" onClick={saveRoles}>Save roles</button></>}>
         <p className="text-sm text-surface-500 mb-4">Select roles for {roleModal?.firstName} {roleModal?.lastName}</p>
         <div className="space-y-2">
           {ALL_ROLES.map(role => {
-            const { label } = getRoleBadge(role)
-            const checked   = selectedRoles.includes(role)
+            const checked = selectedRoles.includes(role)
             return (
               <label key={role} className="flex items-center gap-3 p-3 rounded-xl cursor-pointer hover:bg-surface-50 border border-surface-100">
-                <input type="checkbox" checked={checked} onChange={() => toggleRole(role)} className="w-4 h-4 accent-primary-600" />
-                <span className="text-sm font-medium text-surface-700">{label}</span>
+                <input type="checkbox" checked={checked}
+                  onChange={() => setSelectedRoles(prev => checked ? prev.filter(r => r !== role) : [...prev, role])}
+                  className="w-4 h-4 accent-primary-600" />
+                <span className="text-sm font-medium text-surface-700">{role.replace('ROLE_', '')}</span>
               </label>
             )
           })}
@@ -242,21 +223,16 @@ export default function UsersPage() {
           <div className="relative bg-white rounded-2xl shadow-modal p-6 w-full max-w-md animate-slide-up">
             <h2 className="text-lg font-semibold mb-1">Deprecate user</h2>
             <p className="text-sm text-surface-500 mb-4">
-              {deprUser.firstName} {deprUser.lastName} will be blocked from logging in. Their documents and data are preserved. An admin can restore this account at any time.
+              {deprUser.firstName} {deprUser.lastName} will be blocked from logging in.
+              All data is preserved and can be restored at any time.
             </p>
-            <label className="label">Reason (optional)</label>
-            <input
-              value={deprReason}
-              onChange={(e) => setDeprReason(e.target.value)}
-              placeholder="e.g. Left the organisation"
-              className="input mb-5"
-              autoFocus
-            />
+            <label className="label">Reason <span className="text-surface-400 font-normal">(optional)</span></label>
+            <input value={deprReason} onChange={e => setDeprReason(e.target.value)}
+              placeholder="e.g. Left the organisation" className="input mb-5" autoFocus />
             <div className="flex gap-3 justify-end">
               <button className="btn-secondary" onClick={() => { setDeprUser(null); setDeprReason('') }}>Cancel</button>
-              <button
-                className="btn bg-amber-600 text-white hover:bg-amber-700 focus-visible:ring-amber-500 shadow-sm"
-                onClick={handleDeprecate} disabled={deprLoading}>
+              <button onClick={handleDeprecate} disabled={deprLoading}
+                className="btn bg-amber-600 text-white hover:bg-amber-700 shadow-sm">
                 {deprLoading ? 'Deprecating…' : 'Deprecate user'}
               </button>
             </div>

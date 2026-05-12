@@ -21,35 +21,6 @@ import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
-/**
- * Service implementation covering all authentication and credential-management
- * operations for the DocVault application.
- *
- * <h2>Responsibilities</h2>
- * <ul>
- * <li><b>Login</b> – validates credentials, updates last-login, issues access
- * and refresh tokens.</li>
- * <li><b>Register</b> – creates a new user with the default VIEWER role, sends
- * a welcome e-mail.</li>
- * <li><b>Token refresh</b> – validates, revokes, and rotates refresh
- * tokens.</li>
- * <li><b>Forgot password</b> – generates a one-time token and emails a reset
- * link.</li>
- * <li><b>Reset password</b> – validates the token, updates the password, marks
- * the token as used, revokes all refresh tokens.</li>
- * <li><b>Change password</b> – verifies the current password before
- * updating.</li>
- * <li><b>Logout</b> – revokes all refresh tokens for the user.</li>
- * <li><b>User mapping</b> – converts {@link User} entities to
- * {@link UserResponse} DTOs; shared by other services.</li>
- * </ul>
- *
- * @author DocVault Team
- * @version 1.0.0
- * @since 1.0.0
- * @see JwtUtil
- * @see EmailService
- */
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -64,35 +35,13 @@ public class AuthServiceImpl {
     private final AuthenticationManager authManager;
     private final CustomUserDetailsService userDetailsService;
     private final EmailService emailService;
+    private final SettingsService settingsService;
+    private final UserApprovalRepository approvalRepository;
+    private final NotificationService notificationService;
 
-    /**
-     * Password-reset token expiry window in minutes. Injected from
-     * {@code app.password-reset.expiry-minutes}.
-     */
     @Value("${app.password-reset.expiry-minutes}")
     private int resetExpiryMinutes;
 
-    // ── Login ─────────────────────────────────────────────────────────────
-    /**
-     * Authenticates a user with their e-mail and password, then issues JWT
-     * access and refresh tokens.
-     *
-     * <p>
-     * Steps:
-     * <ol>
-     * <li>Delegates credential validation to
-     * {@link AuthenticationManager}.</li>
-     * <li>Updates {@link User#getLastLogin()} to {@code now}.</li>
-     * <li>Generates a short-lived access token and a long-lived refresh
-     * token.</li>
-     * </ol>
-     *
-     * @param request the {@link LoginRequest} containing e-mail and password
-     * @return an {@link AuthResponse} with both tokens and the user's profile
-     * data
-     * @throws BadCredentialsException if the credentials are invalid
-     * @throws DisabledException if the account has been deactivated
-     */
     @Transactional
     public AuthResponse login(LoginRequest request) {
         authManager.authenticate(
@@ -106,33 +55,63 @@ public class AuthServiceImpl {
         UserDetails userDetails = userDetailsService.loadUserByUsername(user.getEmail());
         String accessToken = jwtUtil.generateToken(userDetails);
         String refreshToken = createRefreshToken(user);
+
         return buildAuthResponse(accessToken, refreshToken, user);
     }
 
-    // ── Register ──────────────────────────────────────────────────────────
     /**
-     * Creates a new user account, assigns the default {@code ROLE_VIEWER} role,
-     * sends a welcome e-mail, and immediately issues authentication tokens so
-     * the user is logged in after registration.
+     * Register a new user.
      *
-     * @param request the {@link RegisterRequest} with username, e-mail,
-     * password, and name fields
-     * @return an {@link AuthResponse} with tokens and the new user's profile
-     * data
-     * @throws DuplicateResourceException if the e-mail or username is already
-     * registered
+     * <p>
+     * Flow branches on three settings:
+     * <ol>
+     * <li><b>Re-application after rejection.</b> If the email already exists
+     * but the user has a REJECTED approval entry, we wipe that record and
+     * create a fresh pending registration. Any other duplicate email is
+     * rejected.</li>
+     * <li><b>Auto-approval by domain.</b> If {@code require_admin_approval} is
+     * on but the email's domain matches an entry in
+     * {@code auto_approve_domains} (comma- separated list, e.g.
+     * "acme.com,partner.com"), the user is approved immediately and gets
+     * tokens.</li>
+     * <li><b>Otherwise pending.</b> User is saved inactive, a UserApproval row
+     * is created, and an in-app notification is fanned out to every active
+     * admin.</li>
+     * </ol>
+     *
+     * <p>
+     * Returns {@link AuthResponse} when the user can log in immediately, or
+     * {@link ApiResponse} when the user is pending admin approval.
      */
     @Transactional
-    public AuthResponse register(RegisterRequest request) {
+    public Object register(RegisterRequest request) {
+        // Step 1: Check for re-application after rejection
         if (userRepository.existsByEmail(request.getEmail())) {
-            throw new DuplicateResourceException("Email already registered");
+            User existing = userRepository.findByEmail(request.getEmail()).orElseThrow();
+            var prior = approvalRepository.findByUserId(existing.getId()).orElse(null);
+            boolean wasRejected = prior != null
+                    && prior.getStatus() == UserApproval.ApprovalStatus.REJECTED;
+
+            if (wasRejected) {
+                // Allow re-application: delete the old approval + user records.
+                approvalRepository.delete(prior);
+                userRepository.delete(existing);
+                userRepository.flush();   // ensure delete is applied before insert
+                log.info("Re-application after rejection: {}", request.getEmail());
+            } else {
+                throw new DuplicateResourceException("Email already registered");
+            }
         }
         if (userRepository.existsByUsername(request.getUsername())) {
             throw new DuplicateResourceException("Username already taken");
         }
 
-        Role viewerRole = roleRepository.findByName(RoleName.ROLE_VIEWER)
+        Role defaultRole = roleRepository.findByName(RoleName.ROLE_EMPLOYEE)
                 .orElseThrow(() -> new ResourceNotFoundException("Default role not found"));
+
+        boolean approvalRequired = settingsService.getBool("require_admin_approval");
+        boolean autoApproved = approvalRequired && matchesAutoApproveDomain(request.getEmail());
+        boolean pending = approvalRequired && !autoApproved;
 
         User user = User.builder()
                 .username(request.getUsername())
@@ -141,14 +120,33 @@ public class AuthServiceImpl {
                 .firstName(request.getFirstName())
                 .lastName(request.getLastName())
                 .phoneNumber(request.getPhoneNumber())
-                .roles(new HashSet<>(Set.of(viewerRole)))
+                .roles(new HashSet<>(Set.of(defaultRole)))
+                .isActive(!pending) // active unless we're parking for review
+                .isEmailVerified(false)
                 .build();
         userRepository.save(user);
 
+        if (pending) {
+            approvalRepository.save(UserApproval.builder().user(user).build());
+            // Fan-out notification to all active admins so they see the badge update
+            notificationService.notifyAllAdmins(
+                    Notification.NotificationType.PENDING_APPROVAL,
+                    "New registration pending review",
+                    user.getFirstName() + " " + user.getLastName() + " (" + user.getEmail() + ") is awaiting approval.",
+                    "/approvals"
+            );
+            log.info("Registration pending approval: {}", user.getEmail());
+            return ApiResponse.ok("Registration received. An administrator will review your account.");
+        }
+
+        // Either approval was off, or domain auto-approved → log them in immediately.
+        if (autoApproved) {
+            log.info("Registration auto-approved by domain rule: {}", user.getEmail());
+        }
         try {
             emailService.sendWelcomeEmail(user);
         } catch (Exception e) {
-            log.warn("Welcome email failed for {}: {}", user.getEmail(), e.getMessage());
+            log.warn("Welcome email failed: {}", e.getMessage());
         }
 
         UserDetails userDetails = userDetailsService.loadUserByUsername(user.getEmail());
@@ -157,16 +155,30 @@ public class AuthServiceImpl {
         return buildAuthResponse(accessToken, refreshToken, user);
     }
 
-    // ── Token refresh ─────────────────────────────────────────────────────
     /**
-     * Validates an existing refresh token, revokes it, and issues a brand-new
-     * access/refresh token pair (rotation strategy).
-     *
-     * @param refreshTokenStr the opaque refresh-token string from the client
-     * @return a new {@link AuthResponse} with fresh tokens
-     * @throws InvalidTokenException if the token is not found, revoked, or
-     * expired
+     * Returns true if the email's domain (case-insensitive) appears in the
+     * comma-separated {@code auto_approve_domains} setting. Empty or missing
+     * setting always returns false.
      */
+    private boolean matchesAutoApproveDomain(String email) {
+        String raw = settingsService.get("auto_approve_domains");
+        if (raw == null || raw.isBlank() || email == null) {
+            return false;
+        }
+        int at = email.lastIndexOf('@');
+        if (at < 0 || at == email.length() - 1) {
+            return false;
+        }
+        String emailDomain = email.substring(at + 1).toLowerCase().trim();
+        for (String d : raw.split(",")) {
+            String allowed = d.trim().toLowerCase();
+            if (!allowed.isEmpty() && allowed.equals(emailDomain)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     @Transactional
     public AuthResponse refreshToken(String refreshTokenStr) {
         RefreshToken stored = refreshTokenRepository.findByToken(refreshTokenStr)
@@ -184,19 +196,6 @@ public class AuthServiceImpl {
         return buildAuthResponse(newAccess, newRefresh, stored.getUser());
     }
 
-    // ── Forgot / reset password ───────────────────────────────────────────
-    /**
-     * Initiates the password-reset flow by generating a one-time token and
-     * dispatching a reset-link e-mail.
-     *
-     * <p>
-     * If no user with the given e-mail exists, the method returns silently
-     * without throwing an exception. This prevents user-enumeration attacks
-     * (the client sees the same response regardless of whether the account
-     * exists).
-     *
-     * @param email the e-mail address submitted via the "forgot password" form
-     */
     @Transactional
     public void forgotPassword(String email) {
         User user = userRepository.findByEmail(email).orElse(null);
@@ -208,31 +207,17 @@ public class AuthServiceImpl {
 
         String token = UUID.randomUUID().toString();
         PasswordResetToken resetToken = PasswordResetToken.builder()
-                .token(token)
-                .user(user)
+                .token(token).user(user)
                 .expiresAt(LocalDateTime.now().plusMinutes(resetExpiryMinutes))
                 .build();
         passwordResetTokenRepository.save(resetToken);
-        emailService.sendPasswordResetEmail(user, token);
+        try {
+            emailService.sendPasswordResetEmail(user, token);
+        } catch (Exception e) {
+            log.warn("Password reset email failed: {}", e.getMessage());
+        }
     }
 
-    /**
-     * Completes the password-reset flow by validating the token and updating
-     * the user's password.
-     *
-     * <p>
-     * After a successful reset:
-     * <ul>
-     * <li>The reset token is marked as used.</li>
-     * <li>All existing refresh tokens are revoked to force re-login on all
-     * devices.</li>
-     * </ul>
-     *
-     * @param request the {@link ResetPasswordRequest} containing the token and
-     * new password
-     * @throws InvalidTokenException if the token is not found, already used, or
-     * expired
-     */
     @Transactional
     public void resetPassword(ResetPasswordRequest request) {
         PasswordResetToken resetToken = passwordResetTokenRepository.findByToken(request.getToken())
@@ -250,23 +235,6 @@ public class AuthServiceImpl {
         refreshTokenRepository.revokeAllByUserId(user.getId());
     }
 
-    // ── Change password ───────────────────────────────────────────────────
-    /**
-     * Allows an authenticated user to change their own password after verifying
-     * the current one.
-     *
-     * <p>
-     * All existing refresh tokens are revoked after a successful change so any
-     * other active sessions are terminated.
-     *
-     * @param userEmail the e-mail of the currently authenticated user
-     * @param request the {@link ChangePasswordRequest} with current and new
-     * passwords
-     * @throws BadCredentialsException if {@code currentPassword} does not match
-     * the stored hash
-     * @throws ResourceNotFoundException if the user is not found (should not
-     * normally occur)
-     */
     @Transactional
     public void changePassword(String userEmail, ChangePasswordRequest request) {
         User user = userRepository.findByEmail(userEmail)
@@ -279,32 +247,27 @@ public class AuthServiceImpl {
         refreshTokenRepository.revokeAllByUserId(user.getId());
     }
 
-    // ── Logout ────────────────────────────────────────────────────────────
-    /**
-     * Logs the user out by revoking all of their active refresh tokens. The
-     * short-lived access token will naturally expire; the client is responsible
-     * for discarding it from local storage.
-     *
-     * @param userEmail the e-mail of the currently authenticated user
-     */
     @Transactional
     public void logout(String userEmail) {
         userRepository.findByEmail(userEmail)
                 .ifPresent(u -> refreshTokenRepository.revokeAllByUserId(u.getId()));
     }
 
-    // ── Shared mapper ─────────────────────────────────────────────────────
-    /**
-     * Converts a {@link User} JPA entity to a {@link UserResponse} DTO safe for
-     * inclusion in API responses (no password hash, etc.).
-     *
-     * <p>
-     * This method is package-accessible so that {@link DocumentServiceImpl} and
-     * {@link UserServiceImpl} can reuse it without duplicating mapping code.
-     *
-     * @param user the entity to convert; must not be {@code null}
-     * @return a fully-populated {@link UserResponse}
-     */
+    private String createRefreshToken(User user) {
+        String token = UUID.randomUUID().toString();
+        RefreshToken rt = RefreshToken.builder()
+                .token(token).user(user)
+                .expiresAt(LocalDateTime.now().plusDays(7)).build();
+        refreshTokenRepository.save(rt);
+        return token;
+    }
+
+    private AuthResponse buildAuthResponse(String access, String refresh, User user) {
+        return AuthResponse.builder()
+                .accessToken(access).refreshToken(refresh)
+                .tokenType("Bearer").user(mapUserToResponse(user)).build();
+    }
+
     public UserResponse mapUserToResponse(User user) {
         return UserResponse.builder()
                 .id(user.getId())
@@ -316,48 +279,10 @@ public class AuthServiceImpl {
                 .profilePicture(user.getProfilePicture())
                 .isActive(user.getIsActive())
                 .isEmailVerified(user.getIsEmailVerified())
-                .roles(user.getRoles().stream()
-                        .map(r -> r.getName().name())
-                        .collect(Collectors.toList()))
+                .roles(user.getRoles().stream().map(r -> r.getName().name()).collect(Collectors.toList()))
                 .createdAt(user.getCreatedAt())
                 .updatedAt(user.getUpdatedAt())
                 .lastLogin(user.getLastLogin())
-                .build();
-    }
-
-    // ── Private helpers ───────────────────────────────────────────────────
-    /**
-     * Persists a new {@link RefreshToken} for the given user and returns its
-     * opaque UUID string.
-     *
-     * @param user the owner of the new token
-     * @return the raw token string to send to the client
-     */
-    private String createRefreshToken(User user) {
-        String token = UUID.randomUUID().toString();
-        refreshTokenRepository.save(RefreshToken.builder()
-                .token(token)
-                .user(user)
-                .expiresAt(LocalDateTime.now().plusDays(7))
-                .build());
-        return token;
-    }
-
-    /**
-     * Assembles an {@link AuthResponse} from the raw token strings and user
-     * entity.
-     *
-     * @param access the JWT access-token string
-     * @param refresh the opaque refresh-token string
-     * @param user the authenticated user entity
-     * @return the fully-populated {@link AuthResponse}
-     */
-    private AuthResponse buildAuthResponse(String access, String refresh, User user) {
-        return AuthResponse.builder()
-                .accessToken(access)
-                .refreshToken(refresh)
-                .tokenType("Bearer")
-                .user(mapUserToResponse(user))
                 .build();
     }
 }

@@ -45,9 +45,17 @@ export function AuthProvider({ children }) {
 
   const register = async (payload) => {
     const data = await authApi.register(payload)
-    saveSession(data)
-    toast.success('Account created successfully!')
-    return data
+    // Backend returns one of two shapes:
+    //   • AuthResponse  → { accessToken, refreshToken, user, ... }
+    //   • ApiResponse   → { success, message }   (when admin approval is required)
+    if (data?.accessToken && data?.user) {
+      saveSession(data)
+      toast.success('Account created successfully!')
+      return { ...data, pending: false }
+    }
+    // Pending approval — caller should redirect to /login with a banner
+    toast.success(data?.message || 'Registration received. An admin will review your account.')
+    return { pending: true, message: data?.message }
   }
 
   const logout = useCallback(async () => {
@@ -64,19 +72,25 @@ export function AuthProvider({ children }) {
     } catch { clearSession() }
   }
 
-  /* Role helpers */
-  const hasRole    = (role)    => user?.roles?.includes(role) ?? false
-  const isAdmin    = ()        => hasRole('ROLE_ADMIN')
-  const isManager  = ()        => hasRole('ROLE_MANAGER') || isAdmin()
-  const isEditor   = ()        => hasRole('ROLE_EDITOR')  || isManager()
-  const canUpload  = ()        => isEditor()
+  /* Role helpers — privilege ladder: ADMIN > HR > ACCOUNT > EMPLOYEE */
+  const hasRole       = (role) => user?.roles?.includes(role) ?? false
+  const isAdmin       = ()     => hasRole('ROLE_ADMIN')
+  const isHr          = ()     => hasRole('ROLE_HR')      || isAdmin()
+  const isAccount     = ()     => hasRole('ROLE_ACCOUNT') || isHr()
+  const isEmployee    = ()     => hasRole('ROLE_EMPLOYEE') || isAccount()
+  const canUpload     = ()     => isAccount()
   const canManageUsers = ()    => isAdmin()
+  // Backward-compat aliases — older components may still call these.
+  const isManager     = isHr
+  const isEditor      = isAccount
 
   return (
     <AuthContext.Provider value={{
       user, loading,
       login, register, logout, refreshUser,
-      hasRole, isAdmin, isManager, isEditor, canUpload, canManageUsers,
+      hasRole, isAdmin, isHr, isAccount, isEmployee,
+      isManager, isEditor,                   // legacy aliases
+      canUpload, canManageUsers,
       isAuthenticated: !!user,
     }}>
       {children}

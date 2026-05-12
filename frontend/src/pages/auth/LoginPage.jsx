@@ -52,6 +52,12 @@ export default function LoginPage() {
             <div className="mb-4 px-4 py-3 rounded-lg bg-red-50 border border-red-200 text-sm text-red-700">{apiErr}</div>
           )}
 
+          {location.state?.pendingMessage && (
+            <div className="mb-4 px-4 py-3 rounded-lg bg-amber-50 border border-amber-200 text-sm text-amber-800">
+              {location.state.pendingMessage}
+            </div>
+          )}
+
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             <div>
               <label className="label">Email address</label>

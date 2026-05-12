@@ -29,8 +29,13 @@ export default function RegisterPage() {
     setApiErr('')
     try {
       const { confirmPassword, ...payload } = data
-      await authRegister(payload)
-      navigate('/dashboard')
+      const result = await authRegister(payload)
+      if (result?.pending) {
+        // Approval required — redirect to login with a one-time banner.
+        navigate('/login', { state: { pendingMessage: result.message } })
+      } else {
+        navigate('/dashboard')
+      }
     } catch (e) {
       setApiErr(getErrorMessage(e))
     }

@@ -12,23 +12,22 @@ import toast from 'react-hot-toast'
 import clsx from 'clsx'
 import {
   HiOutlineSearch, HiOutlineUpload, HiOutlineDocumentText,
-  HiOutlineDownload, HiOutlineEye, HiOutlineViewGrid,
-  HiOutlineViewList, HiOutlineArchive,
+  HiOutlineDownload, HiOutlineTrash, HiOutlineEye,
+  HiOutlineViewGrid, HiOutlineViewList, HiOutlineAdjustments,
 } from 'react-icons/hi'
 
 const PAGE_SIZE = 12
 
 export default function DocumentsPage() {
-  const { canUpload } = useAuth()
+  const { canUpload, isAdmin } = useAuth()
   const qc = useQueryClient()
   const [searchParams, setSearchParams] = useSearchParams()
 
-  const [page,        setPage]       = useState(1)
-  const [view,        setView]       = useState('grid')
-  const [uploadOpen,  setUploadOpen] = useState(false)
-  const [deprDoc,     setDeprDoc]    = useState(null)
-  const [deprReason,  setDeprReason] = useState('')
-  const [deprLoading, setDeprLoading]= useState(false)
+  const [page,          setPage]         = useState(1)
+  const [view,          setView]         = useState('grid')   // grid | list
+  const [uploadOpen,    setUploadOpen]   = useState(false)
+  const [deleteDoc,     setDeleteDoc]    = useState(null)
+  const [deleting,      setDeleting]     = useState(false)
 
   const q      = searchParams.get('q') ?? ''
   const status = searchParams.get('status') ?? ''
@@ -41,7 +40,7 @@ export default function DocumentsPage() {
   const { data, isLoading, isError } = useQuery({
     queryKey: ['documents', page, q, status],
     queryFn:  () => q
-      ? documentsApi.search(q, { page: page - 1, size: PAGE_SIZE })
+      ? documentsApi.search(q, { page: page - 1, size: PAGE_SIZE, status: status || undefined })
       : documentsApi.list({ page: page - 1, size: PAGE_SIZE, status: status || undefined }),
     keepPreviousData: true,
   })
@@ -50,20 +49,20 @@ export default function DocumentsPage() {
   const totalPages = data?.totalPages ?? 1
   const total      = data?.totalElements ?? 0
 
-  const confirmDeprecate = async () => {
-    setDeprLoading(true)
+  const confirmDelete = async () => {
+    setDeleting(true)
     try {
-      await documentsApi.deprecate(deprDoc.id, deprReason)
+      await documentsApi.delete(deleteDoc.id)
       qc.invalidateQueries({ queryKey: ['documents'] })
-      toast.success('Document deprecated — it can be restored by an admin')
-      setDeprDoc(null)
-      setDeprReason('')
+      toast.success('Document moved to archive')
+      setDeleteDoc(null)
     } catch (e) { toast.error(getErrorMessage(e)) }
-    finally { setDeprLoading(false) }
+    finally { setDeleting(false) }
   }
 
   return (
     <div className="animate-fade-in">
+      {/* Header */}
       <div className="page-header mb-5">
         <div>
           <h1 className="page-title">Documents</h1>
@@ -76,7 +75,9 @@ export default function DocumentsPage() {
         )}
       </div>
 
+      {/* Toolbar */}
       <div className="flex flex-wrap items-center gap-3 mb-5">
+        {/* Search */}
         <div className="relative flex-1 min-w-56">
           <HiOutlineSearch className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-surface-400" />
           <input
@@ -86,12 +87,16 @@ export default function DocumentsPage() {
             className="input pl-9"
           />
         </div>
+
+        {/* Status filter */}
         <select value={status} onChange={(e) => setFilter('status', e.target.value)} className="input w-40">
           <option value="">All status</option>
           <option value="ACTIVE">Active</option>
           <option value="ARCHIVED">Archived</option>
           <option value="PENDING_REVIEW">Pending review</option>
         </select>
+
+        {/* View toggle */}
         <div className="flex rounded-lg border border-surface-200 overflow-hidden">
           <button onClick={() => setView('grid')} className={clsx('p-2.5 transition-colors', view === 'grid' ? 'bg-primary-50 text-primary-700' : 'bg-white text-surface-500 hover:bg-surface-50')}>
             <HiOutlineViewGrid className="w-4 h-4" />
@@ -102,6 +107,7 @@ export default function DocumentsPage() {
         </div>
       </div>
 
+      {/* Content */}
       {isLoading ? (
         <div className="flex justify-center py-16"><Spinner size="lg" /></div>
       ) : isError ? (
@@ -110,49 +116,34 @@ export default function DocumentsPage() {
         <EmptyState
           icon={HiOutlineDocumentText}
           title={q ? `No results for "${q}"` : 'No documents yet'}
-          description={q ? 'Try different keywords' : canUpload() ? 'Upload your first document' : 'No documents available'}
+          description={q ? 'Try different keywords or clear the search' : canUpload() ? 'Upload your first document to get started' : 'No documents available'}
           action={canUpload() && <button onClick={() => setUploadOpen(true)} className="btn-primary gap-2"><HiOutlineUpload className="w-4 h-4" /> Upload document</button>}
         />
       ) : view === 'grid' ? (
-        <GridView docs={docs} onDeprecate={setDeprDoc} />
+        <GridView docs={docs} onDelete={setDeleteDoc} />
       ) : (
-        <ListView docs={docs} onDeprecate={setDeprDoc} />
+        <ListView docs={docs} onDelete={setDeleteDoc} />
       )}
 
       <Pagination page={page} totalPages={totalPages} onChange={setPage} />
+
       <UploadModal open={uploadOpen} onClose={() => setUploadOpen(false)} />
 
-      {/* Deprecate confirm with reason input */}
-      {deprDoc && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/50" onClick={() => setDeprDoc(null)} />
-          <div className="relative bg-white rounded-2xl shadow-modal p-6 w-full max-w-md animate-slide-up">
-            <h2 className="text-lg font-semibold mb-1">Deprecate document</h2>
-            <p className="text-sm text-surface-500 mb-4">
-              "{deprDoc.title}" will be hidden from all users. It can be restored by an admin at any time.
-            </p>
-            <label className="label">Reason (optional)</label>
-            <input
-              value={deprReason}
-              onChange={(e) => setDeprReason(e.target.value)}
-              placeholder="e.g. Superseded by newer version"
-              className="input mb-5"
-            />
-            <div className="flex gap-3 justify-end">
-              <button className="btn-secondary" onClick={() => { setDeprDoc(null); setDeprReason('') }}>Cancel</button>
-              <button className="btn bg-amber-600 text-white hover:bg-amber-700 focus-visible:ring-amber-500 shadow-sm"
-                onClick={confirmDeprecate} disabled={deprLoading}>
-                {deprLoading ? 'Deprecating…' : 'Deprecate'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ConfirmDialog
+        open={!!deleteDoc}
+        onClose={() => setDeleteDoc(null)}
+        onConfirm={confirmDelete}
+        loading={deleting}
+        title="Archive document"
+        confirmLabel="Archive"
+        message={`Move "${deleteDoc?.title}" to the archive? It will be hidden from listings but an admin can restore it later.`}
+      />
     </div>
   )
 }
 
-function GridView({ docs, onDeprecate }) {
+/* ── Grid View ───────────────────────────────────────────────── */
+function GridView({ docs, onDelete }) {
   return (
     <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
       {docs.map(doc => (
@@ -161,7 +152,7 @@ function GridView({ docs, onDeprecate }) {
             <div className="flex justify-center mb-3">
               <FileIcon mimeType={doc.mimeType} fileName={doc.originalFileName} size="lg" />
             </div>
-            <p className="text-sm font-medium text-surface-800 truncate text-center">{doc.title}</p>
+            <p className="text-sm font-medium text-surface-800 truncate text-center" title={doc.title}>{doc.title}</p>
             <p className="text-xs text-surface-400 text-center mt-0.5">{formatFileSize(doc.fileSize)}</p>
             <p className="text-xs text-surface-400 text-center">{timeAgo(doc.createdAt)}</p>
           </Link>
@@ -170,10 +161,9 @@ function GridView({ docs, onDeprecate }) {
               className="flex-1 flex items-center justify-center p-2.5 text-surface-400 hover:text-primary-600 hover:bg-primary-50 transition-colors">
               <HiOutlineDownload className="w-4 h-4" />
             </button>
-            <button onClick={() => onDeprecate(doc)}
-              className="flex-1 flex items-center justify-center p-2.5 text-surface-400 hover:text-amber-600 hover:bg-amber-50 transition-colors border-l border-surface-100"
-              title="Deprecate">
-              <HiOutlineArchive className="w-4 h-4" />
+            <button onClick={() => onDelete(doc)}
+              className="flex-1 flex items-center justify-center p-2.5 text-surface-400 hover:text-red-600 hover:bg-red-50 transition-colors border-l border-surface-100">
+              <HiOutlineTrash className="w-4 h-4" />
             </button>
           </div>
         </div>
@@ -182,7 +172,8 @@ function GridView({ docs, onDeprecate }) {
   )
 }
 
-function ListView({ docs, onDeprecate }) {
+/* ── List View ───────────────────────────────────────────────── */
+function ListView({ docs, onDelete }) {
   return (
     <div className="table-wrapper">
       <table className="table">
@@ -218,9 +209,7 @@ function ListView({ docs, onDeprecate }) {
                 <div className="flex items-center justify-end gap-1">
                   <Link to={`/documents/${doc.id}`} className="btn-ghost p-1.5 rounded-lg"><HiOutlineEye className="w-4 h-4" /></Link>
                   <button onClick={() => documentsApi.download(doc.id, doc.originalFileName)} className="btn-ghost p-1.5 rounded-lg"><HiOutlineDownload className="w-4 h-4" /></button>
-                  <button onClick={() => onDeprecate(doc)} className="btn-ghost p-1.5 rounded-lg text-amber-500 hover:text-amber-700 hover:bg-amber-50" title="Deprecate">
-                    <HiOutlineArchive className="w-4 h-4" />
-                  </button>
+                  <button onClick={() => onDelete(doc)} className="btn-ghost p-1.5 rounded-lg text-red-400 hover:text-red-600 hover:bg-red-50"><HiOutlineTrash className="w-4 h-4" /></button>
                 </div>
               </td>
             </tr>
