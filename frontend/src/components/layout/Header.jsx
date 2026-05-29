@@ -44,14 +44,14 @@ export default function Header({ onMenuClick }) {
         <button onClick={onMenuClick} className="btn-ghost p-2 rounded-lg lg:hidden">
           <HiOutlineMenu className="w-5 h-5" />
         </button>
-        <div className="relative w-full max-w-md hidden sm:block">
+        {/* <div className="relative w-full max-w-md hidden sm:block">
           <HiOutlineSearch className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-surface-400" />
           <input
             type="text" placeholder="Search documents…"
             value={search} onChange={e => setSearch(e.target.value)} onKeyDown={handleSearch}
             className="input pl-9 py-1.5 text-sm"
           />
-        </div>
+        </div> */}
       </div>
 
       <div className="flex items-center gap-1 ml-4">

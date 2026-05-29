@@ -48,7 +48,7 @@ export default function RegisterPage() {
           <div className="w-11 h-11 rounded-2xl bg-primary-600 flex items-center justify-center shadow-lg">
             <HiOutlineFolder className="w-6 h-6 text-white" />
           </div>
-          <span className="text-2xl font-bold text-surface-900">DocVault</span>
+          <span className="text-2xl font-bold text-surface-900">Document Management System</span>
         </div>
 
         <div className="card p-8">

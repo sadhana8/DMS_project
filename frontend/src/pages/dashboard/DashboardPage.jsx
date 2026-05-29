@@ -208,11 +208,11 @@ function AdminDashboard({ stats, recent, trend, storage, pending, storagePercent
         <StatCard icon={HiOutlineServer}       label="Storage used"      value={formatFileSize(stats?.storageUsed ?? 0)}  sub={`${storagePercent}% of ${formatFileSize(stats?.storageLimit ?? 0)}`} colour="purple" />
         <StatCard icon={HiOutlineUserGroup}    label="Pending approvals" value={pending ?? 0}                             colour={pending > 0 ? 'amber' : 'gray'} to="/approvals" />
       </div>
-      <StorageBar used={stats?.storageUsed} limit={stats?.storageLimit} percent={storagePercent} />
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+      {/* <StorageBar used={stats?.storageUsed} limit={stats?.storageLimit} percent={storagePercent} /> */}
+      {/* <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
         <div className="lg:col-span-2"><AreaChartCard title="Upload activity — last 30 days" data={trend} color="#3b82f6" gradId="grad-admin" /></div>
         <StoragePieCard storage={storage} />
-      </div>
+      </div> */}
       <RecentDocumentsList recent={recent} />
       <QuickActions title="Admin quick actions" actions={[
         { to: '/documents', state: { upload: true }, label: 'Upload',              icon: HiOutlineUpload,       primary: true },
@@ -235,11 +235,11 @@ function HrDashboard({ stats, recent, trend, storage, storagePercent }) {
         <StatCard icon={HiOutlineServer}       label="Storage used"     value={formatFileSize(stats?.storageUsed ?? 0)} sub={`${storagePercent}% of limit`}               colour="purple" />
         <StatCard icon={HiOutlineUpload}       label="Uploads (30d)"    value={trend ? trend.reduce((a, b) => a + (b.uploads ?? 0), 0) : '—'} colour="teal" />
       </div>
-      <StorageBar used={stats?.storageUsed} limit={stats?.storageLimit} percent={storagePercent} />
+      {/* <StorageBar used={stats?.storageUsed} limit={stats?.storageLimit} percent={storagePercent} />
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
         <div className="lg:col-span-2"><AreaChartCard title="Document activity — last 30 days" data={trend} color="#10b981" gradId="grad-hr" /></div>
         <StoragePieCard storage={storage} />
-      </div>
+      </div> */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <CategoryCard to="/users"              borderColor="border-l-green-400"  bgColor="bg-green-100"  iconColor="text-green-600"  Icon={HiOutlineUsers}           title="Employee Directory"  desc="View and manage all employee accounts" />
         <CategoryCard to="/hr/change-requests" borderColor="border-l-blue-400"   bgColor="bg-blue-100"   iconColor="text-blue-600"   Icon={HiOutlineClipboardCheck}  title="Change Requests"     desc="Pending profile and role change requests" />
@@ -266,11 +266,11 @@ function AccountDashboard({ stats, recent, trend, storage, storagePercent }) {
         <StatCard icon={HiOutlineServer}       label="My storage"     value={formatFileSize(stats?.storageUsed ?? 0)} sub={stats?.storageLimit > 0 ? `${storagePercent}% of quota` : null} colour="purple" />
         <StatCard icon={HiOutlineDocumentText} label="New this month" value={stats?.newThisMonth?.toLocaleString()}   colour="amber" />
       </div>
-      <StorageBar used={stats?.storageUsed} limit={stats?.storageLimit} percent={storagePercent} />
+      {/* <StorageBar used={stats?.storageUsed} limit={stats?.storageLimit} percent={storagePercent} />
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
         <div className="lg:col-span-2"><AreaChartCard title="My uploads — last 30 days" data={trend} color="#8b5cf6" gradId="grad-account" /></div>
         <StoragePieCard storage={storage} />
-      </div>
+      </div> */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <CategoryCard to="/documents" state={{ upload: true }} borderColor="border-l-blue-400"   bgColor="bg-blue-100"   iconColor="text-blue-600"   Icon={HiOutlineUpload}       title="Upload Document"  desc="Add a new document to your library" />
         <CategoryCard to="/documents"                          borderColor="border-l-purple-400" bgColor="bg-purple-100" iconColor="text-purple-600" Icon={HiOutlineFolder}       title="My Documents"     desc="Browse all documents you own" />
@@ -336,11 +336,11 @@ function ManagerDashboard({ stats, recent, trend, storage, storagePercent }) {
         <StatCard icon={HiOutlineServer}       label="Storage used"    value={formatFileSize(stats?.storageUsed ?? 0)} sub={`${storagePercent}% of limit`}               colour="purple" />
         <StatCard icon={HiOutlineUpload}       label="Uploads (30d)"   value={trend ? trend.reduce((a, b) => a + (b.uploads ?? 0), 0) : '—'} colour="indigo" />
       </div>
-      <StorageBar used={stats?.storageUsed} limit={stats?.storageLimit} percent={storagePercent} />
+      {/* <StorageBar used={stats?.storageUsed} limit={stats?.storageLimit} percent={storagePercent} />
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
         <div className="lg:col-span-2"><AreaChartCard title="Team activity — last 30 days" data={trend} color="#6366f1" gradId="grad-mgr" /></div>
         <StoragePieCard storage={storage} />
-      </div>
+      </div> */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <CategoryCard to="/users"              borderColor="border-l-green-400"  bgColor="bg-green-100"  iconColor="text-green-600"  Icon={HiOutlineUsers}          title="Team Directory"    desc="View and manage your team members" />
         <CategoryCard to="/hr/change-requests" borderColor="border-l-indigo-400" bgColor="bg-indigo-100" iconColor="text-indigo-600" Icon={HiOutlineClipboardCheck} title="Change Requests"   desc="Review pending team change requests" />
@@ -367,11 +367,11 @@ function FinanceDashboard({ stats, recent, trend, storage, storagePercent }) {
         <StatCard icon={HiOutlineServer}       label="Storage used"    value={formatFileSize(stats?.storageUsed ?? 0)} sub={`${storagePercent}% of quota`} colour="amber" />
         <StatCard icon={HiOutlineCash}         label="New this month"  value={stats?.newThisMonth?.toLocaleString()}   colour="teal" />
       </div>
-      <StorageBar used={stats?.storageUsed} limit={stats?.storageLimit} percent={storagePercent} />
+      {/* <StorageBar used={stats?.storageUsed} limit={stats?.storageLimit} percent={storagePercent} />
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
         <div className="lg:col-span-2"><AreaChartCard title="Financial document activity — last 30 days" data={trend} color="#10b981" gradId="grad-fin" /></div>
         <StoragePieCard storage={storage} />
-      </div>
+      </div> */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <CategoryCard to="/documents" state={{ category: 'invoice' }} borderColor="border-l-green-400" bgColor="bg-green-100" iconColor="text-green-600" Icon={HiOutlineDocumentText} title="Invoices"        desc="View and manage invoice documents" />
         <CategoryCard to="/documents" state={{ category: 'bill'    }} borderColor="border-l-amber-400" bgColor="bg-amber-100" iconColor="text-amber-600" Icon={HiOutlineCash}         title="Bills & Payments" desc="Bills pending approval and payment records" />
@@ -398,11 +398,11 @@ function LegalDashboard({ stats, recent, trend, storage, storagePercent }) {
         <StatCard icon={HiOutlineServer}       label="Storage used"    value={formatFileSize(stats?.storageUsed ?? 0)} sub={`${storagePercent}% of quota`} colour="indigo" />
         <StatCard icon={HiOutlineShieldCheck}  label="New this month"  value={stats?.newThisMonth?.toLocaleString()}   colour="green" />
       </div>
-      <StorageBar used={stats?.storageUsed} limit={stats?.storageLimit} percent={storagePercent} />
+      {/* <StorageBar used={stats?.storageUsed} limit={stats?.storageLimit} percent={storagePercent} />
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
         <div className="lg:col-span-2"><AreaChartCard title="Legal document activity — last 30 days" data={trend} color="#8b5cf6" gradId="grad-legal" /></div>
         <StoragePieCard storage={storage} />
-      </div>
+      </div> */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <CategoryCard to="/documents" state={{ category: 'contract'   }} borderColor="border-l-purple-400" bgColor="bg-purple-100" iconColor="text-purple-600" Icon={HiOutlineDocumentText} title="Contracts"       desc="Active and archived contracts" />
         <CategoryCard to="/documents" state={{ category: 'policy'     }} borderColor="border-l-indigo-400" bgColor="bg-indigo-100" iconColor="text-indigo-600" Icon={HiOutlineShieldCheck}  title="Policy Files"    desc="Organizational policies and procedures" />

@@ -586,4 +586,4 @@ The JavaDoc covers all 56 Java files with 426 documented blocks including `@para
 
 ## License
 
-MIT License — free to use for personal and commercial projects.
+This project is licensed under the MIT License.
