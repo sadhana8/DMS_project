@@ -43,7 +43,14 @@ export function AuthProvider({ children }) {
       // Don't show "Welcome back" — push them to the password-change screen instead
       return { ...data, mustChangePassword: true }
     }
-    toast.success(`Welcome back, ${data.user.firstName}!`)
+    // Fetch company name to personalize welcome message
+    let companyName = 'DocVault'
+    try {
+      const { settingsApi } = await import('@/api/settings')
+      const info = await settingsApi.getPublicCompany()
+      if (info?.company_name) companyName = info.company_name
+    } catch {}
+    toast.success(`Welcome back, ${data.user.firstName}! — ${companyName}`)
     return data
   }
 

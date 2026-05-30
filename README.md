@@ -1,4 +1,4 @@
-# DocVault — Document Management System
+# MAgnus — Document Management System
 
 A production-ready full-stack Document Management System built with **React 18**, **Spring Boot 3.2**, **PostgreSQL**, and **JWT** authentication.
 
@@ -49,7 +49,7 @@ A production-ready full-stack Document Management System built with **React 18**
 ## Project Structure
 
 ```
-docvault/
+DMS_project/
 ├── backend/                          ← Spring Boot application
 │   ├── build.gradle                  ← Dependencies and build config
 │   ├── settings.gradle
@@ -116,7 +116,7 @@ docvault/
 
 ## Deprecation Policy — No Hard Deletes
 
-> **DocVault never permanently deletes users or documents through the API.**
+> **DMS never permanently deletes users or documents through the API.**
 
 Instead of deleting, every record goes through a **deprecation lifecycle**:
 
@@ -182,11 +182,11 @@ Place the project in a path with **no spaces**:
 
 ```bash
 # Good
-C:\Projects\docvault\        (Windows)
-~/Projects/docvault/         (Mac / Linux)
+C:\Projects\DMS_project\        (Windows)
+~/Projects/DMS_project/         (Mac / Linux)
 
 # Avoid
-C:\My Documents\docvault\    (spaces cause issues)
+C:\My Documents\DMS_project\    (spaces cause issues)
 ```
 
 ### Step 2 — Create the PostgreSQL database
@@ -279,7 +279,7 @@ cd backend
 Wait for this message in the console:
 ```
 Started DocumentManagementSystemApplication in X.XXX seconds
-Tomcat started on port(s): 8080 (http)
+Tomcat started on port(s): 8080 (http) or 8081
 ```
 
 > **First run**: all database tables are auto-created and the default admin account is seeded.

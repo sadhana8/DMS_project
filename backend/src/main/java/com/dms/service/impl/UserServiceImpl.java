@@ -35,7 +35,7 @@ public class UserServiceImpl {
     private final AuditService auditService;
     private final org.springframework.security.crypto.password.PasswordEncoder passwordEncoder;
     private final com.dms.service.EmailService emailService;
-    private final RefreshTokenRepository refreshTokenRepository;
+    private final AppTokenRepository appTokenRepository;
 
     public Page<UserResponse> listUsers(int page, int size, String search) {
         Pageable pg = PageRequest.of(page, size, Sort.by("createdAt").descending());
@@ -301,7 +301,7 @@ public class UserServiceImpl {
 
         // Kill all active sessions immediately so the user is force-logged-out
         try {
-            refreshTokenRepository.revokeAllByUserId(id);
+            appTokenRepository.revokeAllRefreshTokensByUserId(id);
         } catch (Exception ignored) {
         }
 
@@ -334,7 +334,7 @@ public class UserServiceImpl {
 
         // Kill all active sessions immediately
         try {
-            refreshTokenRepository.revokeAllByUserId(id);
+            appTokenRepository.revokeAllRefreshTokensByUserId(id);
         } catch (Exception ignored) {
         }
 

@@ -34,6 +34,13 @@ public class SettingsService {
             put("smtp_enabled", new String[]{"true", "Enable outgoing email via SMTP", "email"});
             put("maintenance_mode", new String[]{"false", "Put system in read-only maintenance mode", "system"});
             put("app_name", new String[]{"DocVault", "Application name shown in UI and emails", "system"});
+            put("company_name", new String[]{"DocVault Organization", "Company name shown in UI, login page, and emails", "company"});
+            put("company_logo_url", new String[]{"", "URL or base64 data URL for company logo shown in sidebar and emails", "company"});
+            put("company_address", new String[]{"", "Company address shown in email footers", "company"});
+            put("company_email", new String[]{"", "Company contact email shown in UI and email footers", "company"});
+            put("company_phone", new String[]{"", "Company phone number shown in UI", "company"});
+            put("company_website", new String[]{"", "Company website URL", "company"});
+            put("app_version", new String[]{"1.0.0", "Application version displayed in admin panel", "system"});
         }
     };
 

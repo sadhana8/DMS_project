@@ -9,6 +9,7 @@ public class DocumentResponse {
     private Long id;
     private String title;
     private String description;
+    private String uploadPurpose;
     private String fileName;
     private String originalFileName;
     private Long fileSize;

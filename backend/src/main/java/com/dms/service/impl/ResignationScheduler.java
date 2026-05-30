@@ -2,7 +2,7 @@ package com.dms.service.impl;
 
 import com.dms.entity.AuditLog;
 import com.dms.entity.User;
-import com.dms.repository.RefreshTokenRepository;
+import com.dms.repository.AppTokenRepository;
 import com.dms.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -16,24 +16,20 @@ import java.util.List;
 /**
  * Revokes access for users whose resignation effective date has passed.
  *
- * <p>Runs every minute (so the documented "access ends within minutes" behavior
- * holds) and also at midnight as a sanity sweep. Any user with
- * {@code resignation_effective_date <= now} and still active is set inactive,
- * has all refresh tokens revoked, and the action is recorded in the audit log.
- *
- * <p>Termination is a separate, immediate action and doesn't go through this
- * job at all.
+ * <p>Runs every minute so the documented "access ends within minutes" behaviour
+ * holds. Any user with {@code resignation_effective_date <= now} and still
+ * active is set inactive, has all refresh tokens revoked in the unified
+ * {@code app_tokens} table, and the action is recorded in the audit log.
  */
 @Component
 @RequiredArgsConstructor
 @Slf4j
 public class ResignationScheduler {
 
-    private final UserRepository userRepository;
-    private final RefreshTokenRepository refreshTokenRepository;
-    private final AuditService auditService;
+    private final UserRepository     userRepository;
+    private final AppTokenRepository appTokenRepository;
+    private final AuditService       auditService;
 
-    /** Cron: every minute, for tighter access-revocation windows. */
     @Scheduled(cron = "0 * * * * *")
     @Transactional
     public void revokeExpiredResignations() {
@@ -44,7 +40,8 @@ public class ResignationScheduler {
         for (User u : due) {
             u.setIsActive(false);
             userRepository.save(u);
-            try { refreshTokenRepository.revokeAllByUserId(u.getId()); } catch (Exception ignored) {}
+            try { appTokenRepository.revokeAllRefreshTokensByUserId(u.getId()); }
+            catch (Exception ignored) {}
             auditService.log("system", null, AuditLog.Action.USER_ACCESS_REVOKED,
                     "USER", u.getId(),
                     "Resignation effective — access revoked for " + u.getEmail(),

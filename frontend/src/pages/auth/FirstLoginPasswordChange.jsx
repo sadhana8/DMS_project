@@ -52,7 +52,7 @@ export default function FirstLoginPasswordChange() {
             </div>
             <h1 className="text-xl font-bold">Set your password</h1>
           </div>
-          <p className="text-sm text-surface-500 mb-6">
+          <p className="text-sm text-surface-500 dark:text-gray-400 mb-6">
             For security, you must change the temporary password that was emailed to you.
             Pick something only you know.
           </p>
@@ -74,7 +74,7 @@ export default function FirstLoginPasswordChange() {
                   {...register('newPassword', { required: 'Required', minLength: { value: 8, message: 'At least 8 characters' } })}
                 />
                 <button type="button" onClick={() => setShow(s => !s)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-surface-400 hover:text-surface-600">
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-surface-400 dark:text-gray-500 hover:text-surface-600 dark:text-gray-400">
                   {show ? <HiOutlineEyeOff className="w-5 h-5" /> : <HiOutlineEye className="w-5 h-5" />}
                 </button>
               </div>

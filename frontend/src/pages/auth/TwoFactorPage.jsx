@@ -124,17 +124,17 @@ export default function TwoFactorPage() {
       {/* How it works */}
       <div className="card p-5">
         <h3 className="section-title">How it works</h3>
-        <ul className="space-y-3 text-sm text-surface-700">
+        <ul className="space-y-3 text-sm text-surface-700 dark:text-gray-300">
           <li className="flex gap-3">
-            <div className="w-6 h-6 rounded-full bg-primary-100 text-primary-700 text-xs font-bold flex items-center justify-center flex-shrink-0">1</div>
+            <div className="w-6 h-6 rounded-full bg-primary-100 dark:bg-primary-900/40 text-primary-700 dark:text-primary-400 text-xs font-bold flex items-center justify-center flex-shrink-0">1</div>
             <div><b>Sign in normally</b> with your email and password.</div>
           </li>
           <li className="flex gap-3">
-            <div className="w-6 h-6 rounded-full bg-primary-100 text-primary-700 text-xs font-bold flex items-center justify-center flex-shrink-0">2</div>
+            <div className="w-6 h-6 rounded-full bg-primary-100 dark:bg-primary-900/40 text-primary-700 dark:text-primary-400 text-xs font-bold flex items-center justify-center flex-shrink-0">2</div>
             <div><b>Receive a 6-digit code</b> by email when performing sensitive actions.</div>
           </li>
           <li className="flex gap-3">
-            <div className="w-6 h-6 rounded-full bg-primary-100 text-primary-700 text-xs font-bold flex items-center justify-center flex-shrink-0">3</div>
+            <div className="w-6 h-6 rounded-full bg-primary-100 dark:bg-primary-900/40 text-primary-700 dark:text-primary-400 text-xs font-bold flex items-center justify-center flex-shrink-0">3</div>
             <div><b>Enter the code</b> to confirm. Codes expire after 10 minutes.</div>
           </li>
         </ul>
@@ -144,7 +144,7 @@ export default function TwoFactorPage() {
       {!enabled && stage === 'idle' && (
         <div className="card p-5">
           <h3 className="section-title">Enable two-factor authentication</h3>
-          <p className="text-sm text-surface-600 mb-4">
+          <p className="text-sm text-surface-600 dark:text-gray-400 mb-4">
             We'll send a 6-digit code to <b>{user?.email}</b>. Enter it on the next step to turn on 2FA.
           </p>
           <button onClick={startEnable} disabled={busy} className="btn-primary gap-2">
@@ -171,7 +171,7 @@ export default function TwoFactorPage() {
       {enabled && stage === 'idle' && (
         <div className="card p-5">
           <h3 className="section-title text-red-700">Disable two-factor authentication</h3>
-          <p className="text-sm text-surface-600 mb-4">
+          <p className="text-sm text-surface-600 dark:text-gray-400 mb-4">
             Disabling 2FA reduces your account security. We'll email a verification code to confirm it's really you.
           </p>
           <button onClick={startDisable} disabled={busy} className="btn-danger gap-2">
@@ -196,7 +196,7 @@ export default function TwoFactorPage() {
 
       {/* Last verified */}
       {enabled && status?.lastVerifiedAt && (
-        <p className="text-xs text-surface-400 text-center">
+        <p className="text-xs text-surface-400 dark:text-gray-500 text-center">
           Last verification: {formatDateTime(status.lastVerifiedAt)}
         </p>
       )}
@@ -208,7 +208,7 @@ function CodeForm({ title, subtitle, code, setCode, busy, onConfirm, onCancel, o
   return (
     <div className="card p-5">
       <h3 className="section-title">{title}</h3>
-      <p className="text-sm text-surface-600 mb-4">{subtitle}</p>
+      <p className="text-sm text-surface-600 dark:text-gray-400 mb-4">{subtitle}</p>
 
       <input
         type="text" inputMode="numeric" autoFocus

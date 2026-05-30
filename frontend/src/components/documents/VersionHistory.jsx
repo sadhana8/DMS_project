@@ -47,7 +47,7 @@ export default function VersionHistory({ document }) {
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-sm font-semibold text-surface-800">Version History</h3>
+        <h3 className="text-sm font-semibold text-surface-800 dark:text-gray-200">Version History</h3>
         {isEditor() && (
           <>
             <button onClick={() => fileRef.current?.click()} className="btn-secondary btn-sm gap-1.5">
@@ -63,21 +63,21 @@ export default function VersionHistory({ document }) {
       ) : (
         <div className="space-y-2">
           {versions.map((v) => (
-            <div key={v.id} className="flex items-start gap-3 p-3.5 rounded-xl bg-surface-50 border border-surface-100">
-              <div className="w-8 h-8 rounded-lg bg-primary-100 flex items-center justify-center text-primary-700 text-xs font-bold flex-shrink-0">
+            <div key={v.id} className="flex items-start gap-3 p-3.5 rounded-xl bg-surface-50 dark:bg-gray-800 border border-surface-100 dark:border-gray-700">
+              <div className="w-8 h-8 rounded-lg bg-primary-100 dark:bg-primary-900/40 flex items-center justify-center text-primary-700 dark:text-primary-400 text-xs font-bold flex-shrink-0">
                 v{v.versionNumber}
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
-                  <p className="text-sm font-medium text-surface-800">Version {v.versionNumber}</p>
+                  <p className="text-sm font-medium text-surface-800 dark:text-gray-200">Version {v.versionNumber}</p>
                   {v.versionNumber === document.currentVersion && (
                     <span className="badge-green text-xs">Current</span>
                   )}
                 </div>
-                {v.changeSummary && <p className="text-xs text-surface-500 mt-0.5">{v.changeSummary}</p>}
+                {v.changeSummary && <p className="text-xs text-surface-500 dark:text-gray-400 mt-0.5">{v.changeSummary}</p>}
                 <div className="flex items-center gap-2 mt-1">
                   <Avatar user={v.uploadedBy} size="sm" />
-                  <p className="text-xs text-surface-400">
+                  <p className="text-xs text-surface-400 dark:text-gray-500">
                     {v.uploadedBy?.firstName} · {formatDateTime(v.createdAt)} · {formatFileSize(v.fileSize)}
                   </p>
                 </div>

@@ -54,18 +54,18 @@ export default function RolesPage() {
                 <div key={r.id} className="card p-5">
                   <div className="flex items-center justify-between mb-3">
                     <span className={clsx('badge', badge.color)}>{badge.label}</span>
-                    <HiOutlineUsers className="w-4 h-4 text-surface-400" />
+                    <HiOutlineUsers className="w-4 h-4 text-surface-400 dark:text-gray-500" />
                   </div>
-                  <h3 className="font-semibold text-surface-900 mb-0.5">{r.displayName}</h3>
-                  <p className="text-xs text-surface-400 font-mono">{r.name}</p>
-                  <div className="mt-4 pt-4 border-t border-surface-100">
-                    <p className="text-xs text-surface-500 mb-2">Key permissions</p>
+                  <h3 className="font-semibold text-surface-900 dark:text-gray-100 mb-0.5">{r.displayName}</h3>
+                  <p className="text-xs text-surface-400 dark:text-gray-500 font-mono">{r.name}</p>
+                  <div className="mt-4 pt-4 border-t border-surface-100 dark:border-gray-800">
+                    <p className="text-xs text-surface-500 dark:text-gray-400 mb-2">Key permissions</p>
                     <ul className="space-y-1">
                       {Object.entries(r.permissions ?? {})
                         .filter(([, v]) => v === 'yes')
                         .slice(0, 4)
                         .map(([k]) => (
-                          <li key={k} className="flex items-center gap-1.5 text-xs text-surface-700">
+                          <li key={k} className="flex items-center gap-1.5 text-xs text-surface-700 dark:text-gray-300">
                             <HiOutlineCheck className="w-3.5 h-3.5 text-green-600" />
                             {prettyPermName(k)}
                           </li>
@@ -80,9 +80,9 @@ export default function RolesPage() {
           {/* Permission matrix */}
           {matrix && (
             <div className="card overflow-hidden">
-              <div className="p-5 border-b border-surface-100">
+              <div className="p-5 border-b border-surface-100 dark:border-gray-800">
                 <h2 className="section-title !mb-0">Permission matrix</h2>
-                <p className="text-xs text-surface-500 mt-1">
+                <p className="text-xs text-surface-500 dark:text-gray-400 mt-1">
                   Full breakdown of what each role can do. "Limited" means scoped by department or document permissions.
                 </p>
               </div>
@@ -104,7 +104,7 @@ export default function RolesPage() {
                   <tbody>
                     {capabilityKeys(matrix).map(cap => (
                       <tr key={cap}>
-                        <td className="font-medium text-surface-800">{prettyPermName(cap)}</td>
+                        <td className="font-medium text-surface-800 dark:text-gray-200">{prettyPermName(cap)}</td>
                         {Object.keys(matrix).map(role => (
                           <td key={role} className="text-center">
                             <PermCell value={matrix[role]?.[cap]} />
@@ -139,7 +139,7 @@ export default function RolesPage() {
 function PermCell({ value }) {
   if (value === 'yes') return <HiOutlineCheck className="w-5 h-5 text-green-600 inline" />
   if (value === 'limited') return <span className="badge badge-yellow">Limited</span>
-  return <HiOutlineX className="w-5 h-5 text-surface-300 inline" />
+  return <HiOutlineX className="w-5 h-5 text-surface-300 dark:text-gray-600 inline" />
 }
 
 function prettyPermName(key) {

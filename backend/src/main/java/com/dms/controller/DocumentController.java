@@ -104,12 +104,13 @@ public class DocumentController {
             @RequestParam("file")                         MultipartFile file,
             @RequestParam(value = "title",       required = false) String title,
             @RequestParam(value = "description", required = false) String description,
+            @RequestParam(value = "purpose",     required = false) String purpose,
             @RequestParam(value = "tags",        required = false) String tags,
             @RequestParam(value = "isPublic",    required = false, defaultValue = "false") Boolean isPublic,
             @RequestParam(value = "folderId",    required = false) Long folderId,
             @AuthenticationPrincipal UserDetails ud) {
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(documentService.uploadDocument(file, title, description, tags,
+                .body(documentService.uploadDocument(file, title, description, purpose, tags,
                         isPublic, folderId, ud.getUsername()));
     }
 

@@ -51,6 +51,16 @@ public class FileStorageService {
         }
     }
 
+    /**
+     * Store a file using the uploader's username as the subdirectory name
+     * (e.g. documents/john.doe/uuid.pdf) for clarity.
+     */
+    public String storeWithUsername(MultipartFile file, String uploaderUsername) {
+        // Sanitize username — strip any path separators
+        String safeUsername = uploaderUsername.replaceAll("[^a-zA-Z0-9._@-]", "_");
+        return store(file, "documents/" + safeUsername);
+    }
+
     public Resource loadAsResource(String relativePath) {
         try {
             Path file = rootLocation.resolve(relativePath).normalize();

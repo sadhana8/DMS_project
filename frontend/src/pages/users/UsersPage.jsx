@@ -160,8 +160,8 @@ export default function UsersPage() {
       </div>
 
       {isAdmin() && !showDeprecated && (
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-surface-500 mb-4 p-3 bg-surface-50 rounded-xl border border-surface-100">
-          <span className="font-medium text-surface-700">User actions:</span>
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-surface-500 dark:text-gray-400 mb-4 p-3 bg-surface-50 dark:bg-gray-800 rounded-xl border border-surface-100 dark:border-gray-700">
+          <span className="font-medium text-surface-700 dark:text-gray-200">User actions:</span>
           <span title="Edit roles" className="flex items-center gap-1"><HiOutlineShieldCheck className="w-3.5 h-3.5 text-primary-500" /> Edit roles</span>
           <span title="Toggle active/inactive" className="flex items-center gap-1"><HiOutlineBan className="w-3.5 h-3.5 text-yellow-500" /> Toggle active</span>
           <span title="Deprecate — soft disable, no session kill" className="flex items-center gap-1"><HiOutlineArchive className="w-3.5 h-3.5 text-amber-500" /> Deprecate (soft)</span>
@@ -182,7 +182,7 @@ export default function UsersPage() {
         <div className="flex justify-center py-16"><Spinner size="lg" /></div>
       ) : users.length === 0 ? (
         <div className="text-center py-16 text-surface-400">
-          <HiOutlineUsers className="w-12 h-12 mx-auto mb-3 text-surface-300" />
+          <HiOutlineUsers className="w-12 h-12 mx-auto mb-3 text-surface-300 dark:text-gray-600" />
           <p>{showDeprecated ? 'No deprecated users' : 'No users found'}</p>
         </div>
       ) : (
@@ -204,15 +204,15 @@ export default function UsersPage() {
                 <tr key={u.id}>
                   <td>
                     <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full bg-primary-100 text-primary-700 flex items-center justify-center text-xs font-bold flex-shrink-0">
+                      <div className="w-8 h-8 rounded-full bg-primary-100 dark:bg-primary-900/40 text-primary-700 dark:text-primary-400 flex items-center justify-center text-xs font-bold flex-shrink-0">
                         {u.firstName?.charAt(0)}{u.lastName?.charAt(0)}
                       </div>
                       <div>
-                        <p className="text-sm font-medium text-surface-800">
+                        <p className="text-sm font-medium text-surface-800 dark:text-gray-200">
                           {u.firstName} {u.lastName}
-                          {u.id === me?.id && <span className="text-xs text-surface-400 ml-1">(you)</span>}
+                          {u.id === me?.id && <span className="text-xs text-surface-400 dark:text-gray-500 ml-1">(you)</span>}
                         </p>
-                        <p className="text-xs text-surface-400">{u.email}</p>
+                        <p className="text-xs text-surface-400 dark:text-gray-500">{u.email}</p>
                       </div>
                     </div>
                   </td>
@@ -225,7 +225,7 @@ export default function UsersPage() {
                     </div>
                   </td>
                   <td>
-                    <span className="badge bg-surface-100 text-surface-700">
+                    <span className="badge bg-surface-100 dark:bg-gray-800 text-surface-700 dark:text-gray-300">
                       {(u.department || 'OTHER').charAt(0) + (u.department || 'OTHER').slice(1).toLowerCase()}
                     </span>
                   </td>
@@ -241,10 +241,10 @@ export default function UsersPage() {
                     )}
                   </td>
                   {showDeprecated
-                    ? <td className="text-xs text-surface-500">{u.deprecationReason || '—'}</td>
-                    : <td className="text-xs text-surface-500">{u.lastLogin ? timeAgo(u.lastLogin) : 'Never'}</td>
+                    ? <td className="text-xs text-surface-500 dark:text-gray-400">{u.deprecationReason || '—'}</td>
+                    : <td className="text-xs text-surface-500 dark:text-gray-400">{u.lastLogin ? timeAgo(u.lastLogin) : 'Never'}</td>
                   }
-                  <td className="text-xs text-surface-500">{timeAgo(u.createdAt)}</td>
+                  <td className="text-xs text-surface-500 dark:text-gray-400">{timeAgo(u.createdAt)}</td>
                   {isAdmin() && (
                     <td>
                       <div className="flex items-center justify-end gap-1">
@@ -298,16 +298,16 @@ export default function UsersPage() {
       {/* Role editor */}
       <Modal open={!!roleModal} onClose={() => setRoleModal(null)} title={`Edit roles — ${roleModal?.firstName}`} size="sm"
         footer={<><button className="btn-secondary" onClick={() => setRoleModal(null)}>Cancel</button><button className="btn-primary" onClick={saveRoles}>Save roles</button></>}>
-        <p className="text-sm text-surface-500 mb-4">Select roles for {roleModal?.firstName} {roleModal?.lastName}</p>
+        <p className="text-sm text-surface-500 dark:text-gray-400 mb-4">Select roles for {roleModal?.firstName} {roleModal?.lastName}</p>
         <div className="space-y-2">
           {ALL_ROLES.map(role => {
             const checked = selectedRoles.includes(role)
             return (
-              <label key={role} className="flex items-center gap-3 p-3 rounded-xl cursor-pointer hover:bg-surface-50 border border-surface-100">
+              <label key={role} className="flex items-center gap-3 p-3 rounded-xl cursor-pointer hover:bg-surface-50 dark:hover:bg-gray-800 border border-surface-100 dark:border-gray-700">
                 <input type="checkbox" checked={checked}
                   onChange={() => setSelectedRoles(prev => checked ? prev.filter(r => r !== role) : [...prev, role])}
                   className="w-4 h-4 accent-primary-600" />
-                <span className="text-sm font-medium text-surface-700">{role.replace('ROLE_', '')}</span>
+                <span className="text-sm font-medium text-surface-700 dark:text-gray-200 dark:text-gray-200">{role.replace('ROLE_', '')}</span>
               </label>
             )
           })}
@@ -318,9 +318,9 @@ export default function UsersPage() {
       {deprUser && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/50" onClick={() => setDeprUser(null)} />
-          <div className="relative bg-white rounded-2xl shadow-modal p-6 w-full max-w-md animate-slide-up">
-            <h2 className="text-lg font-semibold mb-1">Deprecate user</h2>
-            <p className="text-sm text-surface-500 mb-4">
+          <div className="relative bg-white dark:bg-gray-900 border border-surface-200 dark:border-gray-700 rounded-2xl shadow-modal p-6 w-full max-w-md animate-slide-up">
+            <h2 className="text-lg font-semibold dark:text-gray-100 dark:text-gray-100 mb-1">Deprecate user</h2>
+            <p className="text-sm text-surface-500 dark:text-gray-400 mb-4">
               {deprUser.firstName} {deprUser.lastName} will be blocked from logging in.
               All data is preserved and can be restored at any time.
             </p>
@@ -348,7 +348,7 @@ export default function UsersPage() {
             {createBusy ? 'Creating…' : 'Create & email password'}
           </button>
         </>}>
-        <p className="text-sm text-surface-500 mb-4">
+        <p className="text-sm text-surface-500 dark:text-gray-400 mb-4">
           A strong random password will be generated and emailed to the user.
           They'll be required to change it the first time they log in.
         </p>
@@ -407,13 +407,13 @@ export default function UsersPage() {
                   className={clsx('px-3 py-1.5 rounded-lg text-xs font-medium border',
                     checked
                       ? 'bg-primary-600 text-white border-primary-600'
-                      : 'bg-white text-surface-600 border-surface-200 hover:border-primary-300')}>
+                      : 'bg-white dark:bg-gray-800 text-surface-600 dark:text-gray-300 border-surface-200 dark:border-gray-600 hover:border-primary-300')}>
                   {role.replace('ROLE_','')}
                 </button>
               )
             })}
           </div>
-          <p className="text-xs text-surface-400 mt-1">Defaults to Employee if none selected.</p>
+          <p className="text-xs text-surface-400 dark:text-gray-500 mt-1">Defaults to Employee if none selected.</p>
         </div>
       </Modal>
 
@@ -421,14 +421,14 @@ export default function UsersPage() {
       {termUser && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/50" onClick={() => setTermUser(null)} />
-          <div className="relative bg-white rounded-2xl shadow-modal p-6 w-full max-w-md animate-slide-up">
+          <div className="relative bg-white dark:bg-gray-900 border border-surface-200 dark:border-gray-700 rounded-2xl shadow-modal p-6 w-full max-w-md animate-slide-up">
             <div className="flex items-center gap-2 mb-1">
-              <div className="w-8 h-8 rounded-lg bg-red-100 text-red-700 flex items-center justify-center">
+              <div className="w-8 h-8 rounded-lg bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 flex items-center justify-center">
                 <HiOutlineX className="w-4 h-4" />
               </div>
-              <h2 className="text-lg font-semibold">Terminate user — immediate</h2>
+              <h2 className="text-lg font-semibold dark:text-gray-100">Terminate user — immediate</h2>
             </div>
-            <p className="text-sm text-surface-500 mb-4">
+            <p className="text-sm text-surface-500 dark:text-gray-400 mb-4">
               <strong>{termUser.firstName} {termUser.lastName}</strong> will be logged out
               within seconds and cannot log in again. The reason is recorded in the audit
               trail and emailed to the user.
@@ -452,18 +452,18 @@ export default function UsersPage() {
       {suspUser && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/50" onClick={() => setSuspUser(null)} />
-          <div className="relative bg-white rounded-2xl shadow-modal p-6 w-full max-w-md animate-slide-up">
+          <div className="relative bg-white dark:bg-gray-900 border border-surface-200 dark:border-gray-700 rounded-2xl shadow-modal p-6 w-full max-w-md animate-slide-up">
             <div className="flex items-center gap-2 mb-1">
-              <div className="w-8 h-8 rounded-lg bg-orange-100 text-orange-700 flex items-center justify-center">
+              <div className="w-8 h-8 rounded-lg bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400 flex items-center justify-center">
                 <HiOutlineBan className="w-4 h-4" />
               </div>
-              <h2 className="text-lg font-semibold">Suspend user — temporary block</h2>
+              <h2 className="text-lg font-semibold dark:text-gray-100">Suspend user — temporary block</h2>
             </div>
-            <p className="text-sm text-surface-500 mb-1">
+            <p className="text-sm text-surface-500 dark:text-gray-400 mb-1">
               <strong>{suspUser.firstName} {suspUser.lastName}</strong> will be immediately
               blocked from logging in and all active sessions will be force-terminated.
             </p>
-            <p className="text-xs text-surface-400 mb-4">
+            <p className="text-xs text-surface-400 dark:text-gray-500 mb-4">
               Unlike termination, suspension is fully reversible — use <strong>Restore</strong> to
               reinstate the account. No termination email is sent.
             </p>

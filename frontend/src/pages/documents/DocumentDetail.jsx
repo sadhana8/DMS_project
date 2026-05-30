@@ -95,13 +95,18 @@ export default function DocumentDetail() {
               </div>
             ) : (
               <>
-                <h1 className="text-xl font-semibold text-surface-900 truncate">{doc.title}</h1>
-                {doc.description && <p className="text-sm text-surface-500 mt-1">{doc.description}</p>}
+                <h1 className="text-xl font-semibold text-surface-900 dark:text-gray-100 truncate">{doc.title}</h1>
+                {doc.description && <p className="text-sm text-surface-500 dark:text-gray-400 mt-1">{doc.description}</p>}
                 <div className="flex flex-wrap items-center gap-3 mt-2">
                   <StatusBadge status={doc.status} />
-                  <span className="text-xs text-surface-400">v{doc.currentVersion}</span>
-                  <span className="text-xs text-surface-400">{formatFileSize(doc.fileSize)}</span>
-                  <span className="text-xs text-surface-400">{timeAgo(doc.createdAt)}</span>
+                  <span className="text-xs text-surface-400 dark:text-gray-500">v{doc.currentVersion}</span>
+                  <span className="text-xs text-surface-400 dark:text-gray-500">{formatFileSize(doc.fileSize)}</span>
+                  <span className="text-xs text-surface-400 dark:text-gray-500">{timeAgo(doc.createdAt)}</span>
+                  {doc.uploadPurpose && (
+                    <span className="text-xs text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 px-2 py-0.5 rounded-full">
+                      Purpose logged
+                    </span>
+                  )}
                 </div>
               </>
             )}
@@ -158,27 +163,39 @@ export default function DocumentDetail() {
 
 function DetailsTab({ doc }) {
   const rows = [
-    { label: 'Owner',       value: `${doc.owner?.firstName} ${doc.owner?.lastName}`, icon: HiOutlineUser },
-    { label: 'File name',   value: doc.originalFileName,                              icon: HiOutlineDocumentText },
-    { label: 'File size',   value: formatFileSize(doc.fileSize),                      icon: HiOutlineDocumentText },
-    { label: 'MIME type',   value: doc.mimeType,                                      icon: HiOutlineDocumentText },
-    { label: 'Uploaded',    value: formatDateTime(doc.createdAt),                     icon: HiOutlineClock },
-    { label: 'Last updated',value: formatDateTime(doc.updatedAt),                     icon: HiOutlineClock },
-    { label: 'Tags',        value: doc.tags || '—',                                   icon: HiOutlineTag },
-    { label: 'Downloads',   value: doc.downloadCount ?? 0,                            icon: HiOutlineDownload },
-    { label: 'Views',       value: doc.viewCount ?? 0,                                icon: HiOutlineDocumentText },
+    { label: 'Owner',        value: `${doc.owner?.firstName} ${doc.owner?.lastName}`, icon: HiOutlineUser },
+    { label: 'File name',    value: doc.originalFileName,                              icon: HiOutlineDocumentText },
+    { label: 'File size',    value: formatFileSize(doc.fileSize),                      icon: HiOutlineDocumentText },
+    { label: 'MIME type',    value: doc.mimeType,                                      icon: HiOutlineDocumentText },
+    { label: 'Uploaded at',  value: formatDateTime(doc.createdAt),                     icon: HiOutlineClock },
+    { label: 'Last updated', value: formatDateTime(doc.updatedAt),                     icon: HiOutlineClock },
+    { label: 'Tags',         value: doc.tags || '—',                                   icon: HiOutlineTag },
+    { label: 'Downloads',    value: doc.downloadCount ?? 0,                            icon: HiOutlineDownload },
+    { label: 'Views',        value: doc.viewCount ?? 0,                                icon: HiOutlineDocumentText },
   ]
   return (
-    <div className="card">
-      <dl className="divide-y divide-surface-100">
-        {rows.map(({ label, value, icon: Icon }) => (
-          <div key={label} className="flex items-center gap-4 px-5 py-3.5">
-            <Icon className="w-4 h-4 text-surface-400 flex-shrink-0" />
-            <dt className="text-sm text-surface-500 w-32 flex-shrink-0">{label}</dt>
-            <dd className="text-sm text-surface-800 font-medium flex-1">{value}</dd>
-          </div>
-        ))}
-      </dl>
+    <div className="space-y-4">
+      {doc.uploadPurpose && (
+        <div className="card p-5">
+          <p className="text-xs font-semibold text-surface-500 dark:text-gray-400 uppercase tracking-wide mb-2">
+            Purpose of upload
+          </p>
+          <p className="text-sm text-surface-700 dark:text-gray-300 leading-relaxed">
+            {doc.uploadPurpose}
+          </p>
+        </div>
+      )}
+      <div className="card">
+        <dl className="divide-y divide-surface-100 dark:divide-gray-800">
+          {rows.map(({ label, value, icon: Icon }) => (
+            <div key={label} className="flex items-center gap-4 px-5 py-3.5">
+              <Icon className="w-4 h-4 text-surface-400 dark:text-gray-500 flex-shrink-0" />
+              <dt className="text-sm text-surface-500 dark:text-gray-400 w-32 flex-shrink-0">{label}</dt>
+              <dd className="text-sm text-surface-800 dark:text-gray-200 font-medium flex-1">{value}</dd>
+            </div>
+          ))}
+        </dl>
+      </div>
     </div>
   )
 }

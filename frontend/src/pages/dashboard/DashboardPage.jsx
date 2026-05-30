@@ -22,21 +22,21 @@ const PIE_COLORS = ['#3b82f6', '#8b5cf6', '#10b981', '#f59e0b', '#ef4444']
 
 function StatCard({ icon: Icon, label, value, sub, colour = 'blue', to }) {
   const cls = {
-    blue:   'bg-blue-50 text-blue-700',
-    green:  'bg-green-50 text-green-700',
-    purple: 'bg-purple-50 text-purple-700',
-    amber:  'bg-amber-50 text-amber-700',
-    red:    'bg-red-50 text-red-700',
-    gray:   'bg-surface-100 text-surface-600',
-    indigo: 'bg-indigo-50 text-indigo-700',
-    teal:   'bg-teal-50 text-teal-700',
+    blue:   'bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300',
+    green:  'bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-300',
+    purple: 'bg-purple-50 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300',
+    amber:  'bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300',
+    red:    'bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-300',
+    gray:   'bg-surface-100 text-surface-600 dark:bg-gray-800 dark:text-gray-400',
+    indigo: 'bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300',
+    teal:   'bg-teal-50 text-teal-700 dark:bg-teal-900/30 dark:text-teal-300',
   }
   const content = (
     <div className="stat-card">
       <div>
-        <p className="text-xs font-medium text-surface-500 uppercase tracking-wider mb-2">{label}</p>
-        <p className="text-2xl font-bold text-surface-900">{value ?? '—'}</p>
-        {sub && <p className="text-xs text-surface-400 mt-1">{sub}</p>}
+        <p className="text-xs font-medium text-surface-500 dark:text-gray-400 uppercase tracking-wider mb-2">{label}</p>
+        <p className="text-2xl font-bold text-surface-900 dark:text-gray-100">{value ?? '—'}</p>
+        {sub && <p className="text-xs text-surface-400 dark:text-gray-500 dark:text-gray-500 mt-1">{sub}</p>}
       </div>
       <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${cls[colour] ?? cls.blue}`}>
         <Icon className="w-5 h-5" />
@@ -51,14 +51,14 @@ function StorageBar({ used, limit, percent }) {
   return (
     <div className="card p-5">
       <div className="flex items-center justify-between mb-3">
-        <p className="text-sm font-semibold text-surface-800">Storage usage</p>
-        <p className="text-sm text-surface-500">{formatFileSize(used ?? 0)} / {formatFileSize(limit ?? 0)}</p>
+        <p className="text-sm font-semibold text-surface-800 dark:text-gray-200 dark:text-gray-200 dark:text-gray-200">Storage usage</p>
+        <p className="text-sm text-surface-500 dark:text-gray-400">{formatFileSize(used ?? 0)} / {formatFileSize(limit ?? 0)}</p>
       </div>
-      <div className="w-full bg-surface-200 rounded-full h-2.5">
+      <div className="w-full bg-surface-200 dark:bg-gray-700 rounded-full h-2.5">
         <div className="h-2.5 rounded-full transition-all duration-500"
           style={{ width: `${percent}%`, backgroundColor: color }} />
       </div>
-      <p className="text-xs text-surface-400 mt-1.5">{percent}% used</p>
+      <p className="text-xs text-surface-400 dark:text-gray-500 dark:text-gray-500 mt-1.5">{percent}% used</p>
     </div>
   )
 }
@@ -67,7 +67,7 @@ function AreaChartCard({ title, data, color, gradId }) {
   return (
     <div className="card p-5">
       <div className="flex items-center justify-between mb-4">
-        <p className="text-sm font-semibold text-surface-800">{title}</p>
+        <p className="text-sm font-semibold text-surface-800 dark:text-gray-200 dark:text-gray-200 dark:text-gray-200">{title}</p>
         <HiOutlineChartBar className="w-4 h-4 text-surface-400" />
       </div>
       {data ? (
@@ -93,7 +93,7 @@ function AreaChartCard({ title, data, color, gradId }) {
 function StoragePieCard({ storage }) {
   return (
     <div className="card p-5">
-      <p className="text-sm font-semibold text-surface-800 mb-4">Storage by type</p>
+      <p className="text-sm font-semibold text-surface-800 dark:text-gray-200 dark:text-gray-200 dark:text-gray-200 mb-4">Storage by type</p>
       {storage && storage.length > 0 ? (
         <>
           <ResponsiveContainer width="100%" height={140}>
@@ -109,14 +109,14 @@ function StoragePieCard({ storage }) {
               <div key={s.name} className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: PIE_COLORS[i % PIE_COLORS.length] }} />
-                  <span className="text-xs text-surface-600">{s.name}</span>
+                  <span className="text-xs text-surface-600 dark:text-gray-300 dark:text-gray-400">{s.name}</span>
                 </div>
-                <span className="text-xs text-surface-500">{formatFileSize(s.size)}</span>
+                <span className="text-xs text-surface-500 dark:text-gray-400 dark:text-gray-400">{formatFileSize(s.size)}</span>
               </div>
             ))}
           </div>
         </>
-      ) : <div className="text-xs text-surface-400 text-center py-8">No data yet</div>}
+      ) : <div className="text-xs text-surface-400 dark:text-gray-500 text-center py-8">No data yet</div>}
     </div>
   )
 }
@@ -125,24 +125,24 @@ function RecentDocumentsList({ recent }) {
   return (
     <div className="card overflow-hidden">
       <div className="flex items-center justify-between px-5 py-4 border-b border-surface-100">
-        <p className="text-sm font-semibold text-surface-800">Recent documents</p>
+        <p className="text-sm font-semibold text-surface-800 dark:text-gray-200 dark:text-gray-200 dark:text-gray-200">Recent documents</p>
         <Link to="/documents" className="text-xs text-primary-600 hover:text-primary-800 font-medium">View all →</Link>
       </div>
       {recent ? (
-        <div className="divide-y divide-surface-100">
+        <div className="divide-y divide-surface-100 dark:divide-gray-800">
           {(recent ?? []).slice(0, 8).map(doc => (
             <Link key={doc.id} to={`/documents/${doc.id}`}
-              className="flex items-center gap-3 px-5 py-3 hover:bg-surface-50 transition-colors">
+              className="flex items-center gap-3 px-5 py-3 hover:bg-surface-50 dark:hover:bg-gray-800 transition-colors">
               <FileIcon mimeType={doc.mimeType} fileName={doc.originalFileName} size="sm" />
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-surface-800 truncate">{doc.title}</p>
-                <p className="text-xs text-surface-400">{doc.owner?.firstName} {doc.owner?.lastName} · {timeAgo(doc.createdAt)}</p>
+                <p className="text-sm font-medium text-surface-800 dark:text-gray-200 truncate">{doc.title}</p>
+                <p className="text-xs text-surface-400 dark:text-gray-500">{doc.owner?.firstName} {doc.owner?.lastName} · {timeAgo(doc.createdAt)}</p>
               </div>
-              <span className="text-xs text-surface-400 flex-shrink-0">{formatFileSize(doc.fileSize)}</span>
+              <span className="text-xs text-surface-400 dark:text-gray-500 flex-shrink-0">{formatFileSize(doc.fileSize)}</span>
             </Link>
           ))}
           {(recent ?? []).length === 0 && (
-            <div className="px-5 py-8 text-center text-sm text-surface-400">No documents yet</div>
+            <div className="px-5 py-8 text-center text-sm text-surface-400 dark:text-gray-500">No documents yet</div>
           )}
         </div>
       ) : <div className="flex justify-center py-8"><Spinner /></div>}
@@ -172,17 +172,17 @@ function CategoryCard({ to, state, borderColor, bgColor, iconColor, Icon, title,
         <div className={`w-8 h-8 ${bgColor} rounded-lg flex items-center justify-center`}>
           <Icon className={`w-4 h-4 ${iconColor}`} />
         </div>
-        <p className="text-sm font-semibold text-surface-800">{title}</p>
+        <p className="text-sm font-semibold text-surface-800 dark:text-gray-200 dark:text-gray-200 dark:text-gray-200">{title}</p>
       </div>
-      <p className="text-xs text-surface-500">{desc}</p>
+      <p className="text-xs text-surface-500 dark:text-gray-400 dark:text-gray-400">{desc}</p>
     </Link>
   )
 }
 
 function AccessRow({ label, allowed }) {
   return (
-    <div className="flex items-center justify-between py-2 border-b border-surface-100 last:border-0">
-      <span className="text-xs text-surface-600">{label}</span>
+    <div className="flex items-center justify-between py-2 border-b border-surface-100 dark:border-gray-800 last:border-0">
+      <span className="text-xs text-surface-600 dark:text-gray-300 dark:text-gray-400">{label}</span>
       <span className={`badge text-xs ${allowed ? 'badge-green' : 'badge-gray'}`}>{allowed ? 'Allowed' : 'Restricted'}</span>
     </div>
   )
@@ -193,11 +193,11 @@ function AdminDashboard({ stats, recent, trend, storage, pending, storagePercent
   return (
     <>
       {pending > 0 && (
-        <Link to="/approvals" className="flex items-center gap-3 p-4 bg-amber-50 border border-amber-200 rounded-xl hover:bg-amber-100 transition-colors">
+        <Link to="/approvals" className="flex items-center gap-3 p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl hover:bg-amber-100 dark:hover:bg-amber-900/30 dark:bg-amber-900/30 transition-colors">
           <HiOutlineUserGroup className="w-5 h-5 text-amber-600 flex-shrink-0" />
           <div className="flex-1">
-            <p className="text-sm font-semibold text-amber-800">{pending} user{pending > 1 ? 's' : ''} waiting for approval</p>
-            <p className="text-xs text-amber-600">Click to review pending registrations</p>
+            <p className="text-sm font-semibold text-amber-800 dark:text-amber-300">{pending} user{pending > 1 ? 's' : ''} waiting for approval</p>
+            <p className="text-xs text-amber-600 dark:text-amber-400">Click to review pending registrations</p>
           </div>
           <span className="text-amber-600 text-sm">Review →</span>
         </Link>
@@ -241,9 +241,9 @@ function HrDashboard({ stats, recent, trend, storage, storagePercent }) {
         <StoragePieCard storage={storage} />
       </div> */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <CategoryCard to="/users"              borderColor="border-l-green-400"  bgColor="bg-green-100"  iconColor="text-green-600"  Icon={HiOutlineUsers}           title="Employee Directory"  desc="View and manage all employee accounts" />
-        <CategoryCard to="/hr/change-requests" borderColor="border-l-blue-400"   bgColor="bg-blue-100"   iconColor="text-blue-600"   Icon={HiOutlineClipboardCheck}  title="Change Requests"     desc="Pending profile and role change requests" />
-        <CategoryCard to="/documents"          borderColor="border-l-purple-400" bgColor="bg-purple-100" iconColor="text-purple-600" Icon={HiOutlineDocumentText}    title="HR Documents"        desc="Policies, contracts and HR files" />
+        <CategoryCard to="/users"              borderColor="border-l-green-400"  bgColor="bg-green-100 dark:bg-green-900/30"  iconColor="text-green-600"  Icon={HiOutlineUsers}           title="Employee Directory"  desc="View and manage all employee accounts" />
+        <CategoryCard to="/hr/change-requests" borderColor="border-l-blue-400"   bgColor="bg-blue-100 dark:bg-blue-900/30"   iconColor="text-blue-600"   Icon={HiOutlineClipboardCheck}  title="Change Requests"     desc="Pending profile and role change requests" />
+        <CategoryCard to="/documents"          borderColor="border-l-purple-400" bgColor="bg-purple-100 dark:bg-purple-900/30" iconColor="text-purple-600" Icon={HiOutlineDocumentText}    title="HR Documents"        desc="Policies, contracts and HR files" />
       </div>
       <RecentDocumentsList recent={recent} />
       <QuickActions title="HR quick actions" actions={[
@@ -272,9 +272,9 @@ function AccountDashboard({ stats, recent, trend, storage, storagePercent }) {
         <StoragePieCard storage={storage} />
       </div> */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <CategoryCard to="/documents" state={{ upload: true }} borderColor="border-l-blue-400"   bgColor="bg-blue-100"   iconColor="text-blue-600"   Icon={HiOutlineUpload}       title="Upload Document"  desc="Add a new document to your library" />
-        <CategoryCard to="/documents"                          borderColor="border-l-purple-400" bgColor="bg-purple-100" iconColor="text-purple-600" Icon={HiOutlineFolder}       title="My Documents"     desc="Browse all documents you own" />
-        <CategoryCard to="/documents/search/advanced"          borderColor="border-l-amber-400"  bgColor="bg-amber-100"  iconColor="text-amber-600"  Icon={HiOutlineChartBar}     title="Advanced Search"  desc="Filter by type, date, size and more" />
+        <CategoryCard to="/documents" state={{ upload: true }} borderColor="border-l-blue-400"   bgColor="bg-blue-100 dark:bg-blue-900/30"   iconColor="text-blue-600"   Icon={HiOutlineUpload}       title="Upload Document"  desc="Add a new document to your library" />
+        <CategoryCard to="/documents"                          borderColor="border-l-purple-400" bgColor="bg-purple-100 dark:bg-purple-900/30" iconColor="text-purple-600" Icon={HiOutlineFolder}       title="My Documents"     desc="Browse all documents you own" />
+        <CategoryCard to="/documents/search/advanced"          borderColor="border-l-amber-400"  bgColor="bg-amber-100 dark:bg-amber-900/30"  iconColor="text-amber-600"  Icon={HiOutlineChartBar}     title="Advanced Search"  desc="Filter by type, date, size and more" />
       </div>
       <RecentDocumentsList recent={recent} />
       <QuickActions title="Quick actions" actions={[
@@ -300,20 +300,20 @@ function EmployeeDashboard({ stats, recent, trend }) {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
         <div className="lg:col-span-2"><AreaChartCard title="Document activity — last 30 days" data={trend} color="#6366f1" gradId="grad-emp" /></div>
         <div className="card p-5">
-          <p className="text-sm font-semibold text-surface-800 mb-4">Your access</p>
+          <p className="text-sm font-semibold text-surface-800 dark:text-gray-200 dark:text-gray-200 dark:text-gray-200 mb-4">Your access</p>
           <div className="space-y-1">
             <AccessRow label="View documents"  allowed={true} />
             <AccessRow label="Download files"  allowed={true} />
             <AccessRow label="Upload documents" allowed={false} />
             <AccessRow label="Manage users"    allowed={false} />
           </div>
-          <p className="text-xs text-surface-400 mt-4">Contact your admin to request additional access.</p>
+          <p className="text-xs text-surface-400 dark:text-gray-500 mt-4">Contact your admin to request additional access.</p>
         </div>
       </div>
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <CategoryCard to="/documents"                 borderColor="border-l-blue-400"   bgColor="bg-blue-100"   iconColor="text-blue-600"   Icon={HiOutlineDocumentText} title="Browse Documents"  desc="View all documents shared with you" />
-        <CategoryCard to="/documents/search/advanced" borderColor="border-l-purple-400" bgColor="bg-purple-100" iconColor="text-purple-600" Icon={HiOutlineChartBar}     title="Advanced Search"   desc="Filter and find documents quickly" />
-        <CategoryCard to="/notifications"             borderColor="border-l-amber-400"  bgColor="bg-amber-100"  iconColor="text-amber-600"  Icon={HiOutlineBell}         title="Notifications"     desc="Stay updated on document activity" />
+        <CategoryCard to="/documents"                 borderColor="border-l-blue-400"   bgColor="bg-blue-100 dark:bg-blue-900/30"   iconColor="text-blue-600"   Icon={HiOutlineDocumentText} title="Browse Documents"  desc="View all documents shared with you" />
+        <CategoryCard to="/documents/search/advanced" borderColor="border-l-purple-400" bgColor="bg-purple-100 dark:bg-purple-900/30" iconColor="text-purple-600" Icon={HiOutlineChartBar}     title="Advanced Search"   desc="Filter and find documents quickly" />
+        <CategoryCard to="/notifications"             borderColor="border-l-amber-400"  bgColor="bg-amber-100 dark:bg-amber-900/30"  iconColor="text-amber-600"  Icon={HiOutlineBell}         title="Notifications"     desc="Stay updated on document activity" />
       </div>
       <RecentDocumentsList recent={recent} />
       <QuickActions title="Quick actions" actions={[
@@ -342,9 +342,9 @@ function ManagerDashboard({ stats, recent, trend, storage, storagePercent }) {
         <StoragePieCard storage={storage} />
       </div> */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <CategoryCard to="/users"              borderColor="border-l-green-400"  bgColor="bg-green-100"  iconColor="text-green-600"  Icon={HiOutlineUsers}          title="Team Directory"    desc="View and manage your team members" />
-        <CategoryCard to="/hr/change-requests" borderColor="border-l-indigo-400" bgColor="bg-indigo-100" iconColor="text-indigo-600" Icon={HiOutlineClipboardCheck} title="Change Requests"   desc="Review pending team change requests" />
-        <CategoryCard to="/documents"          borderColor="border-l-blue-400"   bgColor="bg-blue-100"   iconColor="text-blue-600"   Icon={HiOutlineOfficeBuilding} title="Department Files"  desc="Documents belonging to your department" />
+        <CategoryCard to="/users"              borderColor="border-l-green-400"  bgColor="bg-green-100 dark:bg-green-900/30"  iconColor="text-green-600"  Icon={HiOutlineUsers}          title="Team Directory"    desc="View and manage your team members" />
+        <CategoryCard to="/hr/change-requests" borderColor="border-l-indigo-400" bgColor="bg-indigo-100 dark:bg-indigo-900/30" iconColor="text-indigo-600" Icon={HiOutlineClipboardCheck} title="Change Requests"   desc="Review pending team change requests" />
+        <CategoryCard to="/documents"          borderColor="border-l-blue-400"   bgColor="bg-blue-100 dark:bg-blue-900/30"   iconColor="text-blue-600"   Icon={HiOutlineOfficeBuilding} title="Department Files"  desc="Documents belonging to your department" />
       </div>
       <RecentDocumentsList recent={recent} />
       <QuickActions title="Manager quick actions" actions={[
@@ -373,9 +373,9 @@ function FinanceDashboard({ stats, recent, trend, storage, storagePercent }) {
         <StoragePieCard storage={storage} />
       </div> */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <CategoryCard to="/documents" state={{ category: 'invoice' }} borderColor="border-l-green-400" bgColor="bg-green-100" iconColor="text-green-600" Icon={HiOutlineDocumentText} title="Invoices"        desc="View and manage invoice documents" />
-        <CategoryCard to="/documents" state={{ category: 'bill'    }} borderColor="border-l-amber-400" bgColor="bg-amber-100" iconColor="text-amber-600" Icon={HiOutlineCash}         title="Bills & Payments" desc="Bills pending approval and payment records" />
-        <CategoryCard to="/documents" state={{ category: 'expense' }} borderColor="border-l-blue-400"  bgColor="bg-blue-100"  iconColor="text-blue-600"  Icon={HiOutlineChartBar}     title="Expense Reports"  desc="Team expense and reimbursement documents" />
+        <CategoryCard to="/documents" state={{ category: 'invoice' }} borderColor="border-l-green-400" bgColor="bg-green-100 dark:bg-green-900/30" iconColor="text-green-600" Icon={HiOutlineDocumentText} title="Invoices"        desc="View and manage invoice documents" />
+        <CategoryCard to="/documents" state={{ category: 'bill'    }} borderColor="border-l-amber-400" bgColor="bg-amber-100 dark:bg-amber-900/30" iconColor="text-amber-600" Icon={HiOutlineCash}         title="Bills & Payments" desc="Bills pending approval and payment records" />
+        <CategoryCard to="/documents" state={{ category: 'expense' }} borderColor="border-l-blue-400"  bgColor="bg-blue-100 dark:bg-blue-900/30"  iconColor="text-blue-600"  Icon={HiOutlineChartBar}     title="Expense Reports"  desc="Team expense and reimbursement documents" />
       </div>
       <RecentDocumentsList recent={recent} />
       <QuickActions title="Finance quick actions" actions={[
@@ -404,9 +404,9 @@ function LegalDashboard({ stats, recent, trend, storage, storagePercent }) {
         <StoragePieCard storage={storage} />
       </div> */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <CategoryCard to="/documents" state={{ category: 'contract'   }} borderColor="border-l-purple-400" bgColor="bg-purple-100" iconColor="text-purple-600" Icon={HiOutlineDocumentText} title="Contracts"       desc="Active and archived contracts" />
-        <CategoryCard to="/documents" state={{ category: 'policy'     }} borderColor="border-l-indigo-400" bgColor="bg-indigo-100" iconColor="text-indigo-600" Icon={HiOutlineShieldCheck}  title="Policy Files"    desc="Organizational policies and procedures" />
-        <CategoryCard to="/documents" state={{ category: 'compliance' }} borderColor="border-l-red-400"    bgColor="bg-red-100"    iconColor="text-red-600"    Icon={HiOutlineScale}         title="Compliance Docs" desc="Regulatory and compliance documentation" />
+        <CategoryCard to="/documents" state={{ category: 'contract'   }} borderColor="border-l-purple-400" bgColor="bg-purple-100 dark:bg-purple-900/30" iconColor="text-purple-600" Icon={HiOutlineDocumentText} title="Contracts"       desc="Active and archived contracts" />
+        <CategoryCard to="/documents" state={{ category: 'policy'     }} borderColor="border-l-indigo-400" bgColor="bg-indigo-100 dark:bg-indigo-900/30" iconColor="text-indigo-600" Icon={HiOutlineShieldCheck}  title="Policy Files"    desc="Organizational policies and procedures" />
+        <CategoryCard to="/documents" state={{ category: 'compliance' }} borderColor="border-l-red-400"    bgColor="bg-red-100 dark:bg-red-900/20"    iconColor="text-red-600"    Icon={HiOutlineScale}         title="Compliance Docs" desc="Regulatory and compliance documentation" />
       </div>
       <RecentDocumentsList recent={recent} />
       <QuickActions title="Legal quick actions" actions={[
@@ -432,7 +432,7 @@ function ReviewerDashboard({ stats, recent, trend }) {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
         <div className="lg:col-span-2"><AreaChartCard title="Review activity — last 30 days" data={trend} color="#f59e0b" gradId="grad-rev" /></div>
         <div className="card p-5">
-          <p className="text-sm font-semibold text-surface-800 mb-4">Reviewer access</p>
+          <p className="text-sm font-semibold text-surface-800 dark:text-gray-200 dark:text-gray-200 dark:text-gray-200 mb-4">Reviewer access</p>
           <div className="space-y-1">
             <AccessRow label="View documents"    allowed={true} />
             <AccessRow label="Download files"    allowed={true} />
@@ -442,9 +442,9 @@ function ReviewerDashboard({ stats, recent, trend }) {
         </div>
       </div>
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <CategoryCard to="/documents"                 borderColor="border-l-blue-400"   bgColor="bg-blue-100"   iconColor="text-blue-600"   Icon={HiOutlineDocumentText}  title="Shared With Me"   desc="Documents assigned for your review" />
-        <CategoryCard to="/documents/search/advanced" borderColor="border-l-purple-400" bgColor="bg-purple-100" iconColor="text-purple-600" Icon={HiOutlineChartBar}      title="Advanced Search"  desc="Filter by type, date and status" />
-        <CategoryCard to="/notifications"             borderColor="border-l-amber-400"  bgColor="bg-amber-100"  iconColor="text-amber-600"  Icon={HiOutlineBell}          title="Notifications"    desc="Review requests and updates" />
+        <CategoryCard to="/documents"                 borderColor="border-l-blue-400"   bgColor="bg-blue-100 dark:bg-blue-900/30"   iconColor="text-blue-600"   Icon={HiOutlineDocumentText}  title="Shared With Me"   desc="Documents assigned for your review" />
+        <CategoryCard to="/documents/search/advanced" borderColor="border-l-purple-400" bgColor="bg-purple-100 dark:bg-purple-900/30" iconColor="text-purple-600" Icon={HiOutlineChartBar}      title="Advanced Search"  desc="Filter by type, date and status" />
+        <CategoryCard to="/notifications"             borderColor="border-l-amber-400"  bgColor="bg-amber-100 dark:bg-amber-900/30"  iconColor="text-amber-600"  Icon={HiOutlineBell}          title="Notifications"    desc="Review requests and updates" />
       </div>
       <RecentDocumentsList recent={recent} />
       <QuickActions title="Reviewer quick actions" actions={[

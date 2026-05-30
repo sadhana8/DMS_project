@@ -11,58 +11,60 @@
     --header-height: 64px;
     --transition: 150ms cubic-bezier(.4,0,.2,1);
   }
+  /* Dark mode base overrides */
+  html.dark body { @apply bg-gray-950 text-gray-100; }
 }
 
 @layer components {
   .btn { @apply inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none; }
   .btn-primary   { @apply btn bg-primary-600 text-white hover:bg-primary-700 focus-visible:ring-primary-500 shadow-sm; }
-  .btn-secondary { @apply btn bg-white text-surface-700 border border-surface-200 hover:bg-surface-50 focus-visible:ring-surface-400 shadow-sm; }
+  .btn-secondary { @apply btn bg-white text-surface-700 border border-surface-200 hover:bg-surface-50 focus-visible:ring-surface-400 shadow-sm dark:bg-gray-800 dark:text-gray-200 dark:border-gray-700 dark:hover:bg-gray-700; }
   .btn-danger    { @apply btn bg-red-600 text-white hover:bg-red-700 focus-visible:ring-red-500 shadow-sm; }
-  .btn-ghost     { @apply btn text-surface-600 hover:bg-surface-100 hover:text-surface-900 focus-visible:ring-surface-400; }
+  .btn-ghost     { @apply btn text-surface-600 hover:bg-surface-100 hover:text-surface-900 focus-visible:ring-surface-400 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-100; }
   .btn-sm        { @apply btn text-xs px-3 py-1.5; }
   .btn-lg        { @apply btn text-base px-6 py-3; }
   .btn-success   { @apply btn bg-green-600 text-white hover:bg-green-700 focus-visible:ring-green-500 shadow-sm; }
 
-  .input  { @apply w-full px-3 py-2 rounded-lg border border-surface-200 bg-white text-surface-900 text-sm placeholder-surface-400 shadow-sm transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 disabled:bg-surface-50 disabled:text-surface-400 disabled:cursor-not-allowed; }
-  .label  { @apply block text-sm font-medium text-surface-700 mb-1.5; }
+  .input  { @apply w-full px-3 py-2 rounded-lg border border-surface-200 bg-white text-surface-900 text-sm placeholder-surface-400 shadow-sm transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 disabled:bg-surface-50 disabled:text-surface-400 disabled:cursor-not-allowed dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100 dark:placeholder-gray-500 dark:focus:border-primary-500 dark:disabled:bg-gray-900; }
+  .label  { @apply block text-sm font-medium text-surface-700 mb-1.5 dark:text-gray-300; }
   .field-error { @apply text-xs text-red-600 mt-1; }
 
-  .card         { @apply bg-white rounded-xl border border-surface-200 shadow-card; }
+  .card         { @apply bg-white rounded-xl border border-surface-200 shadow-card dark:bg-gray-900 dark:border-gray-800; }
   .card-padded  { @apply card p-5; }
 
   .badge        { @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium; }
-  .badge-blue   { @apply badge bg-blue-100 text-blue-800; }
-  .badge-green  { @apply badge bg-green-100 text-green-800; }
-  .badge-yellow { @apply badge bg-yellow-100 text-yellow-800; }
-  .badge-red    { @apply badge bg-red-100 text-red-800; }
-  .badge-gray   { @apply badge bg-surface-100 text-surface-700; }
-  .badge-purple { @apply badge bg-purple-100 text-purple-800; }
-  .badge-amber  { @apply badge bg-amber-100 text-amber-800; }
-  .badge-pink   { @apply badge bg-pink-100 text-pink-800; }
+  .badge-blue   { @apply badge bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300; }
+  .badge-green  { @apply badge bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300; }
+  .badge-yellow { @apply badge bg-yellow-100 text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-300; }
+  .badge-red    { @apply badge bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300; }
+  .badge-gray   { @apply badge bg-surface-100 text-surface-700 dark:bg-gray-800 dark:text-gray-300; }
+  .badge-purple { @apply badge bg-purple-100 text-purple-800 dark:bg-purple-900/40 dark:text-purple-300; }
+  .badge-amber  { @apply badge bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300; }
+  .badge-pink   { @apply badge bg-pink-100 text-pink-800 dark:bg-pink-900/40 dark:text-pink-300; }
 
-  .table-wrapper { @apply overflow-x-auto rounded-xl border border-surface-200; }
+  .table-wrapper { @apply overflow-x-auto rounded-xl border border-surface-200 dark:border-gray-800; }
   .table         { @apply w-full text-sm; }
-  .table thead tr { @apply bg-surface-50 border-b border-surface-200; }
-  .table th      { @apply px-4 py-3 text-left text-xs font-semibold text-surface-500 uppercase tracking-wider; }
-  .table td      { @apply px-4 py-3 text-surface-700 border-b border-surface-100; }
-  .table tbody tr { @apply hover:bg-surface-50 transition-colors duration-100; }
+  .table thead tr { @apply bg-surface-50 border-b border-surface-200 dark:bg-gray-800 dark:border-gray-700; }
+  .table th      { @apply px-4 py-3 text-left text-xs font-semibold text-surface-500 uppercase tracking-wider dark:text-gray-400; }
+  .table td      { @apply px-4 py-3 text-surface-700 border-b border-surface-100 dark:text-gray-300 dark:border-gray-800; }
+  .table tbody tr { @apply hover:bg-surface-50 transition-colors duration-100 dark:hover:bg-gray-800/60; }
   .table tbody tr:last-child td { @apply border-b-0; }
 
-  .sidebar-link  { @apply flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-surface-600 hover:bg-surface-100 hover:text-surface-900 transition-all duration-150 cursor-pointer; }
-  .sidebar-link.active { @apply bg-primary-50 text-primary-700 hover:bg-primary-50; }
+  .sidebar-link  { @apply flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-surface-600 hover:bg-surface-100 hover:text-surface-900 transition-all duration-150 cursor-pointer dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-100; }
+  .sidebar-link.active { @apply bg-primary-50 text-primary-700 hover:bg-primary-50 dark:bg-primary-900/30 dark:text-primary-400 dark:hover:bg-primary-900/30; }
 
   .stat-card     { @apply card p-5 flex items-start justify-between; }
   .page-header   { @apply flex items-center justify-between mb-6; }
-  .page-title    { @apply text-2xl font-semibold text-surface-900; }
-  .page-subtitle { @apply text-sm text-surface-500 mt-0.5; }
-  .section-title { @apply text-base font-semibold text-surface-800 mb-3; }
+  .page-title    { @apply text-2xl font-semibold text-surface-900 dark:text-gray-100; }
+  .page-subtitle { @apply text-sm text-surface-500 mt-0.5 dark:text-gray-400; }
+  .section-title { @apply text-base font-semibold text-surface-800 mb-3 dark:text-gray-200; }
 
-  .dropdown      { @apply absolute right-0 mt-2 w-52 rounded-xl border border-surface-200 bg-white shadow-modal py-1 z-50 animate-fade-in; }
-  .dropdown-item { @apply flex items-center gap-2.5 px-4 py-2 text-sm text-surface-700 hover:bg-surface-50 cursor-pointer transition-colors; }
+  .dropdown      { @apply absolute right-0 mt-2 w-52 rounded-xl border border-surface-200 bg-white shadow-modal py-1 z-50 animate-fade-in dark:bg-gray-900 dark:border-gray-700; }
+  .dropdown-item { @apply flex items-center gap-2.5 px-4 py-2 text-sm text-surface-700 hover:bg-surface-50 cursor-pointer transition-colors dark:text-gray-300 dark:hover:bg-gray-800; }
 
   .toggle { @apply relative inline-flex h-5 w-9 items-center rounded-full transition-colors cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-1; }
   .toggle-on  { @apply bg-primary-600; }
-  .toggle-off { @apply bg-surface-300; }
+  .toggle-off { @apply bg-surface-300 dark:bg-gray-700; }
   .toggle-thumb { @apply inline-block h-3.5 w-3.5 rounded-full bg-white shadow transition-transform; }
   .toggle-thumb-on  { transform: translateX(18px); }
   .toggle-thumb-off { transform: translateX(2px); }
@@ -76,3 +78,67 @@
 .line-clamp-1 { display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical;overflow:hidden; }
 .line-clamp-2 { display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden; }
 .line-clamp-3 { display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden; }
+
+/* ── Dark mode enhancements ─────────────────────────────────────────── */
+
+/* Recharts charts in dark mode */
+html.dark .recharts-cartesian-axis-tick-value,
+html.dark .recharts-legend-item-text {
+  fill: #9ca3af !important;
+  color: #9ca3af !important;
+}
+html.dark .recharts-cartesian-grid line {
+  stroke: #374151 !important;
+}
+html.dark .recharts-tooltip-wrapper .recharts-default-tooltip {
+  background-color: #1f2937 !important;
+  border-color: #374151 !important;
+  color: #f3f4f6 !important;
+}
+
+/* Input, select, textarea in dark */
+html.dark input[type="date"],
+html.dark input[type="datetime-local"],
+html.dark input[type="time"] {
+  color-scheme: dark;
+}
+
+/* Select arrow in dark */
+html.dark select option {
+  background-color: #1f2937;
+  color: #f3f4f6;
+}
+
+/* Scrollbar in dark */
+html.dark ::-webkit-scrollbar-thumb { background: #374151; }
+html.dark ::-webkit-scrollbar-thumb:hover { background: #4b5563; }
+html.dark ::-webkit-scrollbar-track { background: #111827; }
+
+/* Focus ring in dark */
+html.dark *:focus-visible {
+  outline-color: #3b82f6;
+}
+
+/* Table striped rows */
+html.dark .table tbody tr:nth-child(even) {
+  background-color: rgba(255,255,255,0.02);
+}
+
+/* Toast notifications in dark */
+html.dark .react-hot-toast > div {
+  background: #1f2937 !important;
+  color: #f3f4f6 !important;
+  border: 1px solid #374151 !important;
+}
+
+/* Animations */
+@keyframes fade-in  { from { opacity: 0 }             to { opacity: 1 } }
+@keyframes slide-up { from { opacity:0; transform:translateY(12px) } to { opacity:1; transform:translateY(0) } }
+.animate-fade-in  { animation: fade-in  200ms ease both }
+.animate-slide-up { animation: slide-up 220ms ease both }
+
+/* Shadow tokens */
+.shadow-card  { box-shadow: 0 1px 3px rgba(0,0,0,.07), 0 1px 2px rgba(0,0,0,.05); }
+.shadow-modal { box-shadow: 0 20px 60px rgba(0,0,0,.18), 0 8px 24px rgba(0,0,0,.12); }
+html.dark .shadow-card  { box-shadow: 0 1px 3px rgba(0,0,0,.4), 0 1px 2px rgba(0,0,0,.3); }
+html.dark .shadow-modal { box-shadow: 0 20px 60px rgba(0,0,0,.6), 0 8px 24px rgba(0,0,0,.4); }

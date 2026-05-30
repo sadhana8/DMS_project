@@ -86,8 +86,8 @@ export default function AuditTrailPage() {
       {/* Header */}
       <div className="page-header mb-5">
         <div className="flex items-center gap-3">
-          <div className="p-2 bg-purple-100 rounded-xl">
-            <HiOutlineShieldCheck className="w-5 h-5 text-purple-700" />
+          <div className="p-2 bg-purple-100 dark:bg-purple-900/30 rounded-xl">
+            <HiOutlineShieldCheck className="w-5 h-5 text-purple-700 dark:text-purple-400" />
           </div>
           <div>
             <h1 className="page-title">Audit Trail</h1>
@@ -116,31 +116,31 @@ export default function AuditTrailPage() {
       {showStats && stats && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-5">
           <div className="card p-4">
-            <p className="text-xs font-semibold text-surface-500 uppercase tracking-wider mb-3">
+            <p className="text-xs font-semibold text-surface-500 dark:text-gray-400 dark:text-gray-400 uppercase tracking-wider mb-3">
               Top Active Users — Last 30 Days
             </p>
             <div className="space-y-2">
               {(stats.topUsers ?? []).slice(0, 5).map((u, i) => (
                 <div key={i} className="flex items-center gap-3">
-                  <span className="text-xs text-surface-400 w-4">{i + 1}</span>
-                  <div className="flex-1 bg-surface-100 rounded-full h-2 overflow-hidden">
+                  <span className="text-xs text-surface-400 dark:text-gray-500 dark:text-gray-500 w-4">{i + 1}</span>
+                  <div className="flex-1 bg-surface-100 dark:bg-gray-700 rounded-full h-2 overflow-hidden">
                     <div className="bg-primary-500 h-2 rounded-full"
                       style={{ width: `${Math.min(100, (u.count / ((stats.topUsers[0]?.count ?? 1))) * 100)}%` }} />
                   </div>
-                  <span className="text-sm font-medium text-surface-700 w-32 truncate">{u.user}</span>
+                  <span className="text-sm font-medium text-surface-700 dark:text-gray-200 dark:text-gray-300 w-32 truncate">{u.user}</span>
                   <span className="badge badge-blue text-xs">{u.count}</span>
                 </div>
               ))}
             </div>
           </div>
           <div className="card p-4">
-            <p className="text-xs font-semibold text-surface-500 uppercase tracking-wider mb-3">
+            <p className="text-xs font-semibold text-surface-500 dark:text-gray-400 dark:text-gray-400 uppercase tracking-wider mb-3">
               Actions Breakdown — Last 30 Days
             </p>
             <div className="space-y-1.5">
               {(stats.actionCounts ?? []).slice(0, 8).map((a, i) => (
                 <div key={i} className="flex items-center justify-between">
-                  <span className="text-xs font-mono text-surface-600">
+                  <span className="text-xs font-mono text-surface-600 dark:text-gray-300">
                     {a.action.replace(/_/g, ' ')}
                   </span>
                   <span className="badge badge-gray text-xs">{a.count}</span>
@@ -155,11 +155,11 @@ export default function AuditTrailPage() {
       <div className="card p-4 mb-5">
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
-            <HiOutlineFilter className="w-4 h-4 text-surface-400" />
-            <span className="text-sm font-medium text-surface-700">Filter</span>
+            <HiOutlineFilter className="w-4 h-4 text-surface-400 dark:text-gray-500" />
+            <span className="text-sm font-medium text-surface-700 dark:text-gray-200">Filter</span>
           </div>
           {hasFilters && (
-            <button onClick={resetFilters} className="flex items-center gap-1 text-xs text-surface-500 hover:text-red-600">
+            <button onClick={resetFilters} className="flex items-center gap-1 text-xs text-surface-500 dark:text-gray-400 dark:text-gray-400 hover:text-red-600">
               <HiOutlineX className="w-3.5 h-3.5" /> Clear all
             </button>
           )}
@@ -219,8 +219,8 @@ export default function AuditTrailPage() {
         <div className="flex justify-center py-20"><Spinner size="lg" /></div>
       ) : logs.length === 0 ? (
         <div className="text-center py-20">
-          <HiOutlineShieldCheck className="w-10 h-10 mx-auto mb-3 text-surface-300" />
-          <p className="text-surface-500">No audit logs match your filters</p>
+          <HiOutlineShieldCheck className="w-10 h-10 mx-auto mb-3 text-surface-300 dark:text-gray-600" />
+          <p className="text-surface-500 dark:text-gray-400">No audit logs match your filters</p>
         </div>
       ) : (
         <div className="table-wrapper">
@@ -239,25 +239,25 @@ export default function AuditTrailPage() {
             <tbody>
               {logs.map(log => (
                 <tr key={log.id}>
-                  <td className="font-mono text-surface-400 whitespace-nowrap">
+                  <td className="font-mono text-surface-400 dark:text-gray-500 dark:text-gray-500 whitespace-nowrap">
                     {formatDateTime(log.createdAt)}
                   </td>
-                  <td className="font-medium text-surface-800">{log.performedBy}</td>
+                  <td className="font-medium text-surface-800 dark:text-gray-200">{log.performedBy}</td>
                   <td>
-                    <span className="font-mono bg-surface-100 text-surface-700 px-1.5 py-0.5 rounded text-xs">
+                    <span className="font-mono bg-surface-100 dark:bg-gray-800 text-surface-700 dark:text-gray-300 px-1.5 py-0.5 rounded text-xs">
                       {log.action}
                     </span>
                   </td>
-                  <td className="text-surface-500">
+                  <td className="text-surface-500 dark:text-gray-400">
                     {log.entityType}
-                    {log.entityId && <span className="text-surface-400"> #{log.entityId}</span>}
+                    {log.entityId && <span className="text-surface-400 dark:text-gray-500"> #{log.entityId}</span>}
                   </td>
                   <td className="max-w-xs">
-                    <span className="truncate block text-surface-700" title={log.description}>
+                    <span className="truncate block text-surface-700 dark:text-gray-300" title={log.description}>
                       {log.description}
                     </span>
                   </td>
-                  <td className="font-mono text-surface-400">{log.ipAddress ?? '—'}</td>
+                  <td className="font-mono text-surface-400 dark:text-gray-500">{log.ipAddress ?? '—'}</td>
                   <td>
                     <span className={clsx('badge', SEVERITY[log.severity] ?? 'badge-gray')}>
                       {log.severity}

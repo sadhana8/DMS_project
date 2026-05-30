@@ -214,7 +214,16 @@ function ListView({ docs, onDelete }) {
               <td className="text-xs">{doc.owner?.firstName} {doc.owner?.lastName}</td>
               <td className="text-xs">{formatFileSize(doc.fileSize)}</td>
               <td><StatusBadge status={doc.status} /></td>
-              <td className="text-xs">{timeAgo(doc.createdAt)}</td>
+              <td className="text-xs">
+                <div>
+                  <p>{timeAgo(doc.createdAt)}</p>
+                  {doc.uploadPurpose && (
+                    <p className="text-[10px] text-amber-500 dark:text-amber-400 mt-0.5 line-clamp-1" title={doc.uploadPurpose}>
+                      📋 {doc.uploadPurpose}
+                    </p>
+                  )}
+                </div>
+              </td>
               <td>
                 <div className="flex items-center justify-end gap-1">
                   <Link to={`/documents/${doc.id}`} className="btn-ghost p-1.5 rounded-lg"><HiOutlineEye className="w-4 h-4" /></Link>

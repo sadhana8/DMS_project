@@ -60,13 +60,13 @@ export default function ChangeRequestsPage() {
       </div>
 
       {/* Status tabs */}
-      <div className="flex border-b border-surface-200 mb-4">
+      <div className="flex border-b border-surface-200 dark:border-gray-700 mb-4">
         {STATUSES.map(s => (
           <button key={s} onClick={() => setStatus(s)}
             className={clsx('px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors',
               status === s
-                ? 'border-primary-600 text-primary-700'
-                : 'border-transparent text-surface-500 hover:text-surface-800')}>
+                ? 'border-primary-600 text-primary-700 dark:text-primary-400'
+                : 'border-transparent text-surface-500 dark:text-gray-400 hover:text-surface-800 dark:text-gray-200')}>
             {s.charAt(0) + s.slice(1).toLowerCase()}
           </button>
         ))}
@@ -78,8 +78,8 @@ export default function ChangeRequestsPage() {
           <div className="flex justify-center py-12"><Spinner /></div>
         ) : !data || data.content.length === 0 ? (
           <div className="py-16 text-center">
-            <HiOutlineDocumentText className="w-10 h-10 text-surface-300 mx-auto mb-2" />
-            <p className="text-sm text-surface-500">No {status.toLowerCase()} requests</p>
+            <HiOutlineDocumentText className="w-10 h-10 text-surface-300 dark:text-gray-600 mx-auto mb-2" />
+            <p className="text-sm text-surface-500 dark:text-gray-400">No {status.toLowerCase()} requests</p>
           </div>
         ) : (
           <div className="divide-y divide-surface-100">
@@ -87,17 +87,17 @@ export default function ChangeRequestsPage() {
               <div key={r.id} className="px-5 py-4">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium text-surface-900">
+                    <p className="text-sm font-medium text-surface-900 dark:text-gray-100">
                       {r.userFirstName} {r.userLastName}{' '}
-                      <span className="text-surface-400 font-normal text-xs">· {r.userEmail}</span>
+                      <span className="text-surface-400 dark:text-gray-500 font-normal text-xs">· {r.userEmail}</span>
                     </p>
-                    <p className="text-sm text-surface-700 mt-1">
+                    <p className="text-sm text-surface-700 dark:text-gray-300 mt-1">
                       Wants to change <strong>{r.fieldName === 'phoneNumber' ? 'phone number' : 'address'}</strong>
                     </p>
                     <div className="mt-2 grid grid-cols-1 md:grid-cols-2 gap-2 text-xs">
-                      <div className="px-3 py-2 rounded-lg bg-surface-50 border border-surface-100">
-                        <p className="text-surface-400 mb-0.5">Current</p>
-                        <p className="text-surface-700 break-words">{r.oldValue || '(empty)'}</p>
+                      <div className="px-3 py-2 rounded-lg bg-surface-50 dark:bg-gray-800 border border-surface-100 dark:border-gray-800">
+                        <p className="text-surface-400 dark:text-gray-500 mb-0.5">Current</p>
+                        <p className="text-surface-700 dark:text-gray-300 break-words">{r.oldValue || '(empty)'}</p>
                       </div>
                       <div className="px-3 py-2 rounded-lg bg-blue-50 border border-blue-100">
                         <p className="text-blue-500 mb-0.5">Requested</p>
@@ -105,14 +105,14 @@ export default function ChangeRequestsPage() {
                       </div>
                     </div>
                     {r.reason && (
-                      <p className="text-xs text-surface-500 mt-2 italic">"{r.reason}"</p>
+                      <p className="text-xs text-surface-500 dark:text-gray-400 mt-2 italic">"{r.reason}"</p>
                     )}
                     {r.reviewNote && (
-                      <p className="text-xs text-surface-500 mt-1">
-                        <span className="text-surface-400">Reviewer note:</span> {r.reviewNote}
+                      <p className="text-xs text-surface-500 dark:text-gray-400 mt-1">
+                        <span className="text-surface-400 dark:text-gray-500">Reviewer note:</span> {r.reviewNote}
                       </p>
                     )}
-                    <p className="text-xs text-surface-400 mt-2">
+                    <p className="text-xs text-surface-400 dark:text-gray-500 mt-2">
                       Submitted {new Date(r.createdAt).toLocaleString()}
                       {r.reviewedBy && <> · Reviewed by {r.reviewedBy} · {new Date(r.reviewedAt).toLocaleString()}</>}
                     </p>
@@ -150,11 +150,11 @@ export default function ChangeRequestsPage() {
       {reviewing && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/50" onClick={() => !busy && setReviewing(null)} />
-          <div className="relative bg-white rounded-2xl shadow-modal p-6 w-full max-w-md animate-slide-up">
+          <div className="relative bg-white dark:bg-gray-900 border border-surface-200 dark:border-gray-700 rounded-2xl shadow-modal p-6 w-full max-w-md animate-slide-up">
             <h2 className="text-lg font-semibold mb-1">
               {reviewing.action === 'approve' ? 'Approve' : 'Reject'} change request
             </h2>
-            <p className="text-sm text-surface-500 mb-4">
+            <p className="text-sm text-surface-500 dark:text-gray-400 mb-4">
               <strong>{reviewing.userFirstName} {reviewing.userLastName}</strong> wants to change their{' '}
               {reviewing.fieldName === 'phoneNumber' ? 'phone number' : 'address'} to{' '}
               <strong>{reviewing.newValue}</strong>.
@@ -162,7 +162,7 @@ export default function ChangeRequestsPage() {
             </p>
             <label className="label">
               {reviewing.action === 'approve' ? 'Note ' : 'Reason for rejection '}
-              <span className={reviewing.action === 'approve' ? 'text-surface-400 font-normal' : 'text-red-500'}>
+              <span className={reviewing.action === 'approve' ? 'text-surface-400 dark:text-gray-500 font-normal' : 'text-red-500'}>
                 {reviewing.action === 'approve' ? '(optional)' : '*'}
               </span>
             </label>

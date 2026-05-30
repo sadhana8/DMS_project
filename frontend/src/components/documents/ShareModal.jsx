@@ -1,8 +1,7 @@
 import { useState } from 'react'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { documentsApi } from '@/api/documents'
-import { usersApi } from '@/api/users'
-import { getRoleBadge, getErrorMessage } from '@/utils/helpers'
+import { getErrorMessage } from '@/utils/helpers'
 import Modal from '@/components/common/Modal'
 import { Avatar } from '@/components/common/index'
 import Spinner from '@/components/common/Spinner'
@@ -10,7 +9,6 @@ import toast from 'react-hot-toast'
 import { HiOutlineTrash, HiOutlinePlus } from 'react-icons/hi'
 
 const PERMISSIONS = ['VIEW','DOWNLOAD','EDIT','ADMIN']
-const PERM_COLORS = { VIEW: 'badge-gray', DOWNLOAD: 'badge-blue', EDIT: 'badge-yellow', ADMIN: 'badge-red' }
 
 export default function ShareModal({ open, onClose, document }) {
   const qc = useQueryClient()
@@ -55,7 +53,7 @@ export default function ShareModal({ open, onClose, document }) {
     <Modal open={open} onClose={onClose} title={`Share "${document?.title}"`} size="md">
       {/* Add user */}
       <div className="mb-5">
-        <p className="text-sm font-medium text-surface-700 mb-2">Add people</p>
+        <p className="text-sm font-medium text-surface-700 dark:text-gray-300 mb-2">Add people</p>
         <div className="flex gap-2">
           <input
             value={email}
@@ -76,28 +74,28 @@ export default function ShareModal({ open, onClose, document }) {
 
       {/* People with access */}
       <div>
-        <p className="text-sm font-medium text-surface-700 mb-3">People with access</p>
+        <p className="text-sm font-medium text-surface-700 dark:text-gray-300 mb-3">People with access</p>
         {isLoading ? (
           <div className="flex justify-center py-6"><Spinner /></div>
         ) : permissions.length === 0 ? (
-          <p className="text-sm text-surface-400 text-center py-6">No shared access yet</p>
+          <p className="text-sm text-surface-400 dark:text-gray-500 text-center py-6">No shared access yet</p>
         ) : (
           <div className="space-y-2">
             {permissions.map((p) => (
-              <div key={p.id} className="flex items-center gap-3 p-3 rounded-xl bg-surface-50">
+              <div key={p.id} className="flex items-center gap-3 p-3 rounded-xl bg-surface-50 dark:bg-gray-800 border border-surface-100 dark:border-gray-700">
                 <Avatar user={p.user} size="sm" />
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-surface-800 truncate">{p.user?.firstName} {p.user?.lastName}</p>
-                  <p className="text-xs text-surface-400 truncate">{p.user?.email}</p>
+                  <p className="text-sm font-medium text-surface-800 dark:text-gray-200 truncate">{p.user?.firstName} {p.user?.lastName}</p>
+                  <p className="text-xs text-surface-400 dark:text-gray-500 truncate">{p.user?.email}</p>
                 </div>
                 <select
                   value={p.permission}
                   onChange={(e) => changePermission(p.user.id, e.target.value)}
-                  className="text-xs border border-surface-200 rounded-lg px-2 py-1 bg-white text-surface-700 focus:outline-none focus:ring-1 focus:ring-primary-500"
+                  className="input w-32 text-xs py-1"
                 >
                   {PERMISSIONS.map(pm => <option key={pm} value={pm}>{pm.charAt(0) + pm.slice(1).toLowerCase()}</option>)}
                 </select>
-                <button onClick={() => removeAccess(p.user.id)} className="btn-ghost p-1.5 rounded-lg text-red-400 hover:text-red-600 hover:bg-red-50">
+                <button onClick={() => removeAccess(p.user.id)} className="btn-ghost p-1.5 rounded-lg text-red-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20">
                   <HiOutlineTrash className="w-4 h-4" />
                 </button>
               </div>

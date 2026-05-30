@@ -38,14 +38,14 @@ export default function NotificationSettingsPage() {
 
       {isLoading ? <div className="flex justify-center py-16"><Spinner size="lg" /></div> : (
         <div className="card overflow-hidden">
-          <div className="grid grid-cols-[1fr_auto_auto] items-center gap-4 px-5 py-3 bg-surface-50 border-b border-surface-200 text-xs font-semibold text-surface-500 uppercase tracking-wider">
+          <div className="grid grid-cols-[1fr_auto_auto] items-center gap-4 px-5 py-3 bg-surface-50 dark:bg-gray-800 border-b border-surface-200 dark:border-gray-700 text-xs font-semibold text-surface-500 dark:text-gray-400 uppercase tracking-wider">
             <span>Event</span><span className="w-16 text-center">In-app</span><span className="w-16 text-center">Email</span>
           </div>
           {settings.map((s, i) => (
-            <div key={s.type} className={`grid grid-cols-[1fr_auto_auto] items-center gap-4 px-5 py-4 ${i > 0 ? 'border-t border-surface-100' : ''}`}>
+            <div key={s.type} className={`grid grid-cols-[1fr_auto_auto] items-center gap-4 px-5 py-4 ${i > 0 ? 'border-t border-surface-100 dark:border-gray-800' : ''}`}>
               <div>
-                <p className="text-sm font-medium text-surface-800">{s.typeLabel}</p>
-                <p className="text-xs text-surface-400 mt-0.5">{s.description}</p>
+                <p className="text-sm font-medium text-surface-800 dark:text-gray-200">{s.typeLabel}</p>
+                <p className="text-xs text-surface-400 dark:text-gray-500 mt-0.5">{s.description}</p>
               </div>
               <div className="w-16 flex justify-center"><Toggle checked={s.inApp ?? true} onChange={v => toggle(s.type, 'inApp', v)} /></div>
               <div className="w-16 flex justify-center"><Toggle checked={s.email ?? true} onChange={v => toggle(s.type, 'email', v)} /></div>
@@ -53,7 +53,7 @@ export default function NotificationSettingsPage() {
           ))}
         </div>
       )}
-      <p className="text-xs text-surface-400 text-center mt-4">Changes take effect immediately for new events.</p>
+      <p className="text-xs text-surface-400 dark:text-gray-500 text-center mt-4">Changes take effect immediately for new events.</p>
     </div>
   )
 }

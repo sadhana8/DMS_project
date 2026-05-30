@@ -50,12 +50,12 @@ export default function ApprovalsPage() {
       </div>
 
       {/* Status tabs */}
-      <div className="flex gap-1 border-b border-surface-200 mb-5">
+      <div className="flex gap-1 border-b border-surface-200 dark:border-gray-700 mb-5">
         {['PENDING','APPROVED','REJECTED'].map(s => (
           <button key={s} onClick={() => { setStatusTab(s); setPage(1) }}
             className={clsx('px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors',
-              statusTab === s ? 'border-primary-600 text-primary-700' : 'border-transparent text-surface-500 hover:text-surface-800')}>
-            {s} {s === 'PENDING' && pendingCount > 0 && <span className="ml-1.5 px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-800 text-xs font-bold">{pendingCount}</span>}
+              statusTab === s ? 'border-primary-600 text-primary-700 dark:text-primary-400' : 'border-transparent text-surface-500 dark:text-gray-400 hover:text-surface-800 dark:hover:text-gray-100')}>
+            {s} {s === 'PENDING' && pendingCount > 0 && <span className="ml-1.5 px-1.5 py-0.5 rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300 text-xs font-bold">{pendingCount}</span>}
           </button>
         ))}
       </div>
@@ -63,7 +63,7 @@ export default function ApprovalsPage() {
       {isLoading ? (
         <div className="flex justify-center py-16"><Spinner size="lg" /></div>
       ) : approvals.length === 0 ? (
-        <div className="text-center py-16"><HiOutlineClock className="w-12 h-12 mx-auto mb-3 text-surface-300" /><p className="text-surface-400">No {statusTab.toLowerCase()} approvals</p></div>
+        <div className="text-center py-16"><HiOutlineClock className="w-12 h-12 mx-auto mb-3 text-surface-300 dark:text-gray-600" /><p className="text-surface-400 dark:text-gray-500">No {statusTab.toLowerCase()} approvals</p></div>
       ) : (
         <div className="table-wrapper">
           <table className="table">
@@ -73,20 +73,20 @@ export default function ApprovalsPage() {
                 <tr key={a.id}>
                   <td>
                     <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full bg-primary-100 text-primary-700 flex items-center justify-center text-xs font-bold flex-shrink-0">
+                      <div className="w-8 h-8 rounded-full bg-primary-100 dark:bg-primary-900/40 text-primary-700 dark:text-primary-400 flex items-center justify-center text-xs font-bold flex-shrink-0">
                         {a.user?.firstName?.charAt(0)}{a.user?.lastName?.charAt(0)}
                       </div>
                       <div>
-                        <p className="text-sm font-medium text-surface-800">{a.user?.firstName} {a.user?.lastName}</p>
-                        <p className="text-xs text-surface-400">{a.user?.email}</p>
+                        <p className="text-sm font-medium text-surface-800 dark:text-gray-200 dark:text-gray-200">{a.user?.firstName} {a.user?.lastName}</p>
+                        <p className="text-xs text-surface-400 dark:text-gray-500 dark:text-gray-500">{a.user?.email}</p>
                       </div>
                     </div>
                   </td>
-                  <td className="text-xs text-surface-500">{timeAgo(a.createdAt)}</td>
+                  <td className="text-xs text-surface-500 dark:text-gray-400">{timeAgo(a.createdAt)}</td>
                   <td><span className={clsx('badge', STATUS_STYLES[a.status] ?? 'badge-gray')}>{a.status}</span></td>
-                  {statusTab !== 'PENDING' && <td className="text-xs text-surface-600">{a.reviewedBy ?? '—'}</td>}
-                  {statusTab !== 'PENDING' && <td className="text-xs text-surface-500 max-w-xs truncate">{a.reviewNote ?? '—'}</td>}
-                  {statusTab !== 'PENDING' && <td className="text-xs text-surface-400">{a.reviewedAt ? timeAgo(a.reviewedAt) : '—'}</td>}
+                  {statusTab !== 'PENDING' && <td className="text-xs text-surface-600 dark:text-gray-300">{a.reviewedBy ?? '—'}</td>}
+                  {statusTab !== 'PENDING' && <td className="text-xs text-surface-500 dark:text-gray-400 max-w-xs truncate">{a.reviewNote ?? '—'}</td>}
+                  {statusTab !== 'PENDING' && <td className="text-xs text-surface-400 dark:text-gray-500 dark:text-gray-500">{a.reviewedAt ? timeAgo(a.reviewedAt) : '—'}</td>}
                   {statusTab === 'PENDING' && (
                     <td>
                       <div className="flex items-center justify-end gap-1">
@@ -114,18 +114,18 @@ export default function ApprovalsPage() {
         </>}>
         {reviewItem && (
           <div className="space-y-4">
-            <div className="flex items-center gap-3 p-3 bg-surface-50 rounded-xl">
-              <div className="w-10 h-10 rounded-full bg-primary-100 text-primary-700 flex items-center justify-center font-bold">
+            <div className="flex items-center gap-3 p-3 bg-surface-50 dark:bg-gray-800 rounded-xl">
+              <div className="w-10 h-10 rounded-full bg-primary-100 dark:bg-primary-900/40 text-primary-700 dark:text-primary-400 flex items-center justify-center font-bold">
                 {reviewItem.user?.firstName?.charAt(0)}{reviewItem.user?.lastName?.charAt(0)}
               </div>
               <div>
-                <p className="font-medium text-surface-800">{reviewItem.user?.firstName} {reviewItem.user?.lastName}</p>
-                <p className="text-sm text-surface-500">{reviewItem.user?.email}</p>
-                <p className="text-xs text-surface-400 mt-0.5">Registered {timeAgo(reviewItem.createdAt)}</p>
+                <p className="font-medium text-surface-800 dark:text-gray-200">{reviewItem.user?.firstName} {reviewItem.user?.lastName}</p>
+                <p className="text-sm text-surface-500 dark:text-gray-400">{reviewItem.user?.email}</p>
+                <p className="text-xs text-surface-400 dark:text-gray-500 dark:text-gray-500 mt-0.5">Registered {timeAgo(reviewItem.createdAt)}</p>
               </div>
             </div>
             <div>
-              <label className="label">Review note <span className="text-surface-400 font-normal">(optional)</span></label>
+              <label className="label">Review note <span className="text-surface-400 dark:text-gray-500 font-normal">(optional)</span></label>
               <textarea value={note} onChange={e => setNote(e.target.value)} rows={3}
                 placeholder="Reason for approval or rejection…" className="input resize-none" />
             </div>

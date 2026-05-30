@@ -74,8 +74,8 @@ export default function AdvancedSearchPage() {
       {/* Filter panel */}
       <form onSubmit={onSubmit} className="card p-5 mb-5">
         <div className="flex items-center gap-2 mb-4">
-          <HiOutlineFilter className="w-4 h-4 text-surface-500" />
-          <h2 className="text-sm font-semibold text-surface-800">Filters</h2>
+          <HiOutlineFilter className="w-4 h-4 text-surface-500 dark:text-gray-400" />
+          <h2 className="text-sm font-semibold text-surface-800 dark:text-gray-200">Filters</h2>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -128,7 +128,7 @@ export default function AdvancedSearchPage() {
           </button>
           <button type="button" onClick={onReset} className="btn-secondary">Reset</button>
           {applied && (
-            <span className="ml-auto text-xs text-surface-500">
+            <span className="ml-auto text-xs text-surface-500 dark:text-gray-400">
               {total} result{total !== 1 ? 's' : ''}
             </span>
           )}
@@ -201,13 +201,13 @@ export default function AdvancedSearchPage() {
                       </td>
                       <td className="text-sm">
                         {d.owner?.firstName} {d.owner?.lastName}
-                        <p className="text-xs text-surface-400">{d.owner?.email}</p>
+                        <p className="text-xs text-surface-400 dark:text-gray-500">{d.owner?.email}</p>
                       </td>
-                      <td className="text-sm text-surface-600">{d.owner?.department ?? '—'}</td>
-                      <td className="text-xs text-surface-500 line-clamp-1 max-w-xs">{d.tags || '—'}</td>
-                      <td className="text-sm text-surface-600">{formatFileSize(d.fileSize)}</td>
+                      <td className="text-sm text-surface-600 dark:text-gray-400">{d.owner?.department ?? '—'}</td>
+                      <td className="text-xs text-surface-500 dark:text-gray-400 line-clamp-1 max-w-xs">{d.tags || '—'}</td>
+                      <td className="text-sm text-surface-600 dark:text-gray-400">{formatFileSize(d.fileSize)}</td>
                       <td><StatusBadge status={d.status} /></td>
-                      <td className="text-xs text-surface-500">{timeAgo(d.createdAt)}</td>
+                      <td className="text-xs text-surface-500 dark:text-gray-400">{timeAgo(d.createdAt)}</td>
                     </tr>
                   ))}
                 </tbody>

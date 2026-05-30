@@ -62,7 +62,7 @@ export default function NotificationsPage() {
 
       {/* Filters */}
       <div className="card p-4 mb-5">
-        <div className="flex items-center gap-2 mb-3"><HiOutlineFilter className="w-4 h-4 text-surface-400" /><span className="text-sm font-medium text-surface-700">Filter notifications</span></div>
+        <div className="flex items-center gap-2 mb-3"><HiOutlineFilter className="w-4 h-4 text-surface-400 dark:text-gray-500" /><span className="text-sm font-medium text-surface-700 dark:text-gray-300">Filter notifications</span></div>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3">
           <div>
             <label className="label text-xs">Type</label>
@@ -96,23 +96,23 @@ export default function NotificationsPage() {
       {isLoading ? (
         <div className="flex justify-center py-16"><Spinner size="lg" /></div>
       ) : notifications.length === 0 ? (
-        <div className="text-center py-16"><HiOutlineBell className="w-12 h-12 mx-auto mb-3 text-surface-300" /><p className="text-surface-400">No notifications match your filters</p></div>
+        <div className="text-center py-16"><HiOutlineBell className="w-12 h-12 mx-auto mb-3 text-surface-300 dark:text-gray-600" /><p className="text-surface-400 dark:text-gray-500">No notifications match your filters</p></div>
       ) : (
         <div className="card overflow-hidden">
           {notifications.map((n, i) => (
             <div key={n.id} onClick={() => markOne(n.id)}
-              className={clsx('flex items-start gap-4 px-5 py-4 cursor-pointer transition-colors', i > 0 && 'border-t border-surface-100', !n.isRead ? 'bg-blue-50/40 hover:bg-blue-50' : 'hover:bg-surface-50')}>
+              className={clsx('flex items-start gap-4 px-5 py-4 cursor-pointer transition-colors', i > 0 && 'border-t border-surface-100 dark:border-gray-800', !n.isRead ? 'bg-blue-50/40 hover:bg-blue-50' : 'hover:bg-surface-50 dark:bg-gray-800')}>
               <div className={clsx('w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5', COLOUR[n.colour] ? `badge ${COLOUR[n.colour]}` : 'badge badge-gray')}>
                 {n.typeLabel?.charAt(0) ?? 'N'}
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-start justify-between gap-3">
                   <div>
-                    <p className={clsx('text-sm', !n.isRead ? 'font-semibold text-surface-900' : 'font-medium text-surface-700')}>{n.title}</p>
-                    <p className="text-sm text-surface-500 mt-0.5">{n.message}</p>
+                    <p className={clsx('text-sm', !n.isRead ? 'font-semibold text-surface-900 dark:text-gray-100' : 'font-medium text-surface-700 dark:text-gray-300')}>{n.title}</p>
+                    <p className="text-sm text-surface-500 dark:text-gray-400 mt-0.5">{n.message}</p>
                   </div>
                   <div className="flex flex-col items-end gap-1 flex-shrink-0">
-                    <span className="text-xs text-surface-400 whitespace-nowrap">{timeAgo(n.createdAt)}</span>
+                    <span className="text-xs text-surface-400 dark:text-gray-500 whitespace-nowrap">{timeAgo(n.createdAt)}</span>
                     {!n.isRead && <span className={clsx('w-2 h-2 rounded-full', DOT[n.colour] ?? 'bg-blue-500')} />}
                   </div>
                 </div>

@@ -43,9 +43,11 @@ public class SecurityConfig {
                     "/auth/forgot-password", "/auth/reset-password",
                     "/auth/refresh-token"
                 ).permitAll()
+                // Public company branding endpoint (no auth needed for login page)
+                .requestMatchers("/settings/public/**").permitAll()
                 // Publicly accessible static assets
                 .requestMatchers("/cdn/**").permitAll()
-                // Admin-only endpoints
+                // Admin-only endpoints (but /settings/public/** is already allowed above)
                 .requestMatchers("/audit/**", "/approvals/**", "/settings/**").hasRole("ADMIN")
                 // Everything else requires authentication
                 .anyRequest().authenticated()

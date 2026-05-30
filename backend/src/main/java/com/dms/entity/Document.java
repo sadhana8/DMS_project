@@ -75,6 +75,9 @@ public class Document {
     @Column(name = "tags")
     private String tags;
 
+    @Column(name = "upload_purpose", columnDefinition = "TEXT")
+    private String uploadPurpose;
+
     @Column(name = "is_public")
     @Builder.Default
     private Boolean isPublic = false;

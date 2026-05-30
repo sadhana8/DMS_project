@@ -21,6 +21,8 @@ import java.io.IOException;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import org.springframework.beans.factory.annotation.Value;
+
 /**
  * Business logic for the {@link Document} lifecycle.
  *
@@ -54,6 +56,9 @@ public class DocumentServiceImpl {
     private final AuthServiceImpl               authService;
     private final AuditService                  auditService;
     private final Tika                          tika = new Tika();
+
+    @Value("${app.storage.max-file-size:5242880}")
+    private long maxFileSizeBytes;
 
     // ── List / Search ────────────────────────────────────────────────────
     public Page<DocumentResponse> listDocuments(String userEmail, int page, int size, String status) {
@@ -109,8 +114,13 @@ public class DocumentServiceImpl {
     // ── Upload ───────────────────────────────────────────────────────────
     @Transactional
     public DocumentResponse uploadDocument(MultipartFile file, String title, String description,
-                                           String tags, Boolean isPublic, Long folderId,
+                                           String purpose, String tags, Boolean isPublic, Long folderId,
                                            String userEmail) {
+        // Enforce 5 MB limit server-side (frontend already validates, but always check here too)
+        if (file.getSize() > maxFileSizeBytes) {
+            long mb = maxFileSizeBytes / (1024 * 1024);
+            throw new IllegalArgumentException("File size exceeds the " + mb + " MB limit");
+        }
         User owner = getUser(userEmail);
         Folder folder = null;
         if (folderId != null) {
@@ -122,7 +132,7 @@ public class DocumentServiceImpl {
         }
 
         String mimeType  = detectMime(file);
-        String filePath  = fileStorageService.store(file, "documents/" + owner.getId());
+        String filePath  = fileStorageService.storeWithUsername(file, owner.getUsername());
         long   fileSize  = file.getSize();
         String origName  = file.getOriginalFilename();
         String ext       = origName != null && origName.contains(".")
@@ -131,6 +141,7 @@ public class DocumentServiceImpl {
         Document doc = Document.builder()
                 .title(title != null && !title.isBlank() ? title : origName)
                 .description(description)
+                .uploadPurpose(purpose)
                 .fileName(filePath.substring(filePath.lastIndexOf("/") + 1))
                 .originalFileName(origName)
                 .filePath(filePath)
@@ -296,7 +307,7 @@ public class DocumentServiceImpl {
         User     user = getUser(userEmail);
         checkEditAccess(doc, user);
 
-        String filePath = fileStorageService.store(file, "documents/" + doc.getOwner().getId());
+        String filePath = fileStorageService.storeWithUsername(file, doc.getOwner().getUsername());
         int newVersion  = doc.getCurrentVersion() + 1;
 
         DocumentVersion v = DocumentVersion.builder()
@@ -439,6 +450,7 @@ public class DocumentServiceImpl {
                 .id(doc.getId())
                 .title(doc.getTitle())
                 .description(doc.getDescription())
+                .uploadPurpose(doc.getUploadPurpose())
                 .fileName(doc.getFileName())
                 .originalFileName(doc.getOriginalFileName())
                 .fileSize(doc.getFileSize())
