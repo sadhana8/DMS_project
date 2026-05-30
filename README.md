@@ -1,4 +1,4 @@
-# MAgnus — Document Management System
+# Magnus — Document Management System
 
 A production-ready full-stack Document Management System built with **React 18**, **Spring Boot 3.2**, **PostgreSQL**, and **JWT** authentication.
 
