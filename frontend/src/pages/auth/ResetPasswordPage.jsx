@@ -5,13 +5,15 @@ import { yupResolver } from '@hookform/resolvers/yup'
 import * as yup from 'yup'
 import { authApi } from '@/api/auth'
 import { useCompany } from '@/context/CompanyContext'
+import { passwordRules } from '@/utils/passwordSchema'
 import { getErrorMessage } from '@/utils/helpers'
-import { HiOutlineOfficeBuilding, HiOutlineLockClosed, HiOutlineEye, HiOutlineEyeOff, HiOutlineCheckCircle } from 'react-icons/hi'
+import { HiOutlineOfficeBuilding, HiOutlineLockClosed, HiOutlineCheckCircle } from 'react-icons/hi'
 import Spinner from '@/components/common/Spinner'
+import PasswordField from '@/components/common/PasswordField'
 import toast from 'react-hot-toast'
 
 const schema = yup.object({
-  password:        yup.string().min(8, 'Min 8 characters').required('Password is required'),
+  password:        passwordRules,
   confirmPassword: yup.string().oneOf([yup.ref('password')], 'Passwords do not match').required('Confirm your password'),
 })
 
@@ -22,11 +24,11 @@ export default function ResetPasswordPage() {
   const { company }    = useCompany()
   const companyName    = company?.company_name || 'DocVault'
   const logoUrl        = company?.company_logo_url || ''
-  const [showPw,  setShowPw]  = useState(false)
   const [done,    setDone]    = useState(false)
   const [apiErr,  setApiErr]  = useState('')
 
-  const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm({ resolver: yupResolver(schema) })
+  const { register, handleSubmit, watch, formState: { errors, isSubmitting } } = useForm({ resolver: yupResolver(schema) })
+  const pwWatch = watch('password', '')
 
   if (!token) return (
     <div className="min-h-screen flex items-center justify-center dark:bg-gray-950">
@@ -43,9 +45,7 @@ export default function ResetPasswordPage() {
       await authApi.resetPassword({ token, newPassword: password })
       setDone(true)
       toast.success('Password reset successfully!')
-    } catch (e) {
-      setApiErr(getErrorMessage(e))
-    }
+    } catch (e) { setApiErr(getErrorMessage(e)) }
   }
 
   return (
@@ -53,13 +53,11 @@ export default function ResetPasswordPage() {
       <div className="w-full max-w-md">
         <div className="flex items-center justify-center gap-3 mb-8">
           <div className="w-12 h-12 rounded-2xl bg-primary-600 flex items-center justify-center shadow-lg overflow-hidden">
-            {logoUrl
-              ? <img src={logoUrl} alt={companyName} className="w-full h-full object-contain p-1" />
-              : <HiOutlineOfficeBuilding className="w-6 h-6 text-white" />
-            }
+            {logoUrl ? <img src={logoUrl} alt={companyName} className="w-full h-full object-contain p-1" />
+              : <HiOutlineOfficeBuilding className="w-6 h-6 text-white" />}
           </div>
-          <div className="text-left">
-            <p className="text-xl font-bold text-surface-900 dark:text-gray-100 leading-tight">{companyName}</p>
+          <div>
+            <p className="text-xl font-bold text-surface-900 dark:text-gray-100">{companyName}</p>
             <p className="text-xs text-surface-500 dark:text-gray-400">Document Management System</p>
           </div>
         </div>
@@ -71,9 +69,7 @@ export default function ResetPasswordPage() {
                 <HiOutlineCheckCircle className="w-8 h-8 text-green-600 dark:text-green-400" />
               </div>
               <h2 className="text-lg font-semibold text-surface-900 dark:text-gray-100 mb-2">Password reset!</h2>
-              <p className="text-sm text-surface-500 dark:text-gray-400 mb-6">
-                Your {companyName} password has been updated. You can now sign in with your new password.
-              </p>
+              <p className="text-sm text-surface-500 dark:text-gray-400 mb-6">Your {companyName} password has been updated.</p>
               <button onClick={() => navigate('/login')} className="btn-primary w-full">Go to sign in</button>
             </div>
           ) : (
@@ -82,28 +78,27 @@ export default function ResetPasswordPage() {
                 <HiOutlineLockClosed className="w-6 h-6 text-primary-600 dark:text-primary-400" />
               </div>
               <h1 className="text-xl font-semibold text-surface-900 dark:text-gray-100 mb-1">Set new password</h1>
-              <p className="text-sm text-surface-500 dark:text-gray-400 mb-6">Reset your {companyName} account password. Must be at least 8 characters.</p>
+              <p className="text-sm text-surface-500 dark:text-gray-400 mb-6">
+                Choose a strong password for your {companyName} account.
+              </p>
 
-              {apiErr && (
-                <div className="mb-4 px-4 py-3 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-sm text-red-700 dark:text-red-400">{apiErr}</div>
-              )}
+              {apiErr && <div className="mb-4 px-4 py-3 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-sm text-red-700 dark:text-red-400">{apiErr}</div>}
 
               <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-                <div>
-                  <label className="label">New password</label>
-                  <div className="relative">
-                    <input {...register('password')} type={showPw ? 'text' : 'password'} placeholder="Min 8 characters" className="input pr-10" autoFocus />
-                    <button type="button" onClick={() => setShowPw(v => !v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-surface-400 hover:text-surface-600 dark:text-gray-500 dark:hover:text-gray-300">
-                      {showPw ? <HiOutlineEyeOff className="w-4 h-4" /> : <HiOutlineEye className="w-4 h-4" />}
-                    </button>
-                  </div>
-                  {errors.password && <p className="mt-1 text-xs text-red-600">{errors.password.message}</p>}
-                </div>
-                <div>
-                  <label className="label">Confirm new password</label>
-                  <input {...register('confirmPassword')} type={showPw ? 'text' : 'password'} placeholder="Repeat password" className="input" />
-                  {errors.confirmPassword && <p className="mt-1 text-xs text-red-600">{errors.confirmPassword.message}</p>}
-                </div>
+                <PasswordField
+                  label="New password"
+                  registration={register('password')}
+                  error={errors.password?.message}
+                  watch={pwWatch}
+                  showStrength
+                  placeholder="Min. 10 characters"
+                />
+                <PasswordField
+                  label="Confirm new password"
+                  registration={register('confirmPassword')}
+                  error={errors.confirmPassword?.message}
+                  placeholder="Repeat password"
+                />
                 <button type="submit" disabled={isSubmitting} className="btn-primary w-full">
                   {isSubmitting ? <><Spinner size="sm" /> Resetting…</> : 'Reset password'}
                 </button>

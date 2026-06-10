@@ -76,7 +76,7 @@ export default function SettingsPage() {
       <div className="page-header mb-5">
         <div>
           <div className="flex items-center gap-2 mb-1"><HiOutlineCog className="w-5 h-5 text-primary-600" /><h1 className="page-title">System Settings</h1></div>
-          <p className="page-subtitle">Configure all Document Management system behaviour</p>
+          <p className="page-subtitle">Configure all DocVault system behaviour</p>
         </div>
         <div className="flex items-center gap-2">
           {isDirtyCount > 0 && (

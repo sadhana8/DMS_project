@@ -1,14 +1,24 @@
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
+import { yupResolver } from '@hookform/resolvers/yup'
+import * as yup from 'yup'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@/context/AuthContext'
 import { usersApi } from '@/api/users'
 import { notificationsApi } from '@/api/notifications'
+import { passwordRules } from '@/utils/passwordSchema'
 import Spinner from '@/components/common/Spinner'
+import PasswordField from '@/components/common/PasswordField'
 import toast from 'react-hot-toast'
 import clsx from 'clsx'
 import { HiOutlineUser, HiOutlineShieldCheck, HiOutlineBell, HiOutlineEye, HiOutlineEyeOff, HiOutlineLogout, HiOutlineLockClosed } from 'react-icons/hi'
 import TwoFactorPage from '@/pages/auth/TwoFactorPage'
+
+const pwSchema = yup.object({
+  currentPassword: yup.string().required('Current password is required'),
+  newPassword:     passwordRules,
+  confirmPassword: yup.string().oneOf([yup.ref('newPassword')], 'Passwords do not match').required('Confirm your password'),
+})
 
 function Toggle({ checked, onChange }) {
   return (
@@ -43,7 +53,8 @@ export default function ProfilePage() {
   }
 
   const profileForm = useForm({ defaultValues: { firstName: user?.firstName ?? '', lastName: user?.lastName ?? '', phoneNumber: user?.phoneNumber ?? '' } })
-  const pwForm = useForm()
+  const pwForm = useForm({ resolver: yupResolver(pwSchema) })
+  const pwWatch = pwForm.watch('newPassword', '')
 
   const { data: notifSettings = [] } = useQuery({
     queryKey: ['notif-settings'],
@@ -133,33 +144,30 @@ export default function ProfilePage() {
         </form>
       )}
 
-      {/* Security tab */}
       {tab === 'security' && (
         <div className="space-y-5">
           <form onSubmit={pwForm.handleSubmit(onPassword)} className="card p-6 space-y-4">
             <h2 className="section-title">Change password</h2>
-            <div>
-              <label className="label">Current password</label>
-              <div className="relative">
-                <input {...pwForm.register('currentPassword', { required: true })} type={showOld ? 'text' : 'password'} className="input pr-10" />
-                <button type="button" tabIndex={-1} onClick={() => setShowOld(v=>!v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-surface-400">
-                  {showOld ? <HiOutlineEyeOff className="w-4 h-4" /> : <HiOutlineEye className="w-4 h-4" />}
-                </button>
-              </div>
-            </div>
-            <div>
-              <label className="label">New password</label>
-              <div className="relative">
-                <input {...pwForm.register('newPassword', { required: true, minLength: 8 })} type={showNew ? 'text' : 'password'} placeholder="Min. 8 characters" className="input pr-10" />
-                <button type="button" tabIndex={-1} onClick={() => setShowNew(v=>!v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-surface-400">
-                  {showNew ? <HiOutlineEyeOff className="w-4 h-4" /> : <HiOutlineEye className="w-4 h-4" />}
-                </button>
-              </div>
-            </div>
-            <div>
-              <label className="label">Confirm new password</label>
-              <input {...pwForm.register('confirmPassword', { required: true })} type="password" className="input" />
-            </div>
+            <PasswordField
+              label="Current password"
+              registration={pwForm.register('currentPassword')}
+              error={pwForm.formState.errors.currentPassword?.message}
+              placeholder="Your current password"
+            />
+            <PasswordField
+              label="New password"
+              registration={pwForm.register('newPassword')}
+              error={pwForm.formState.errors.newPassword?.message}
+              watch={pwWatch}
+              showStrength
+              placeholder="Min. 10 characters"
+            />
+            <PasswordField
+              label="Confirm new password"
+              registration={pwForm.register('confirmPassword')}
+              error={pwForm.formState.errors.confirmPassword?.message}
+              placeholder="Repeat new password"
+            />
             <button type="submit" disabled={pwForm.formState.isSubmitting} className="btn-primary gap-2">
               {pwForm.formState.isSubmitting ? <><Spinner size="sm" /> Changing…</> : 'Change password'}
             </button>
@@ -168,7 +176,7 @@ export default function ProfilePage() {
             <h2 className="section-title mb-4">Active sessions</h2>
             <div className="flex items-center justify-between p-3 bg-green-50 dark:bg-green-900/20 rounded-xl">
               <div>
-                <p className="text-sm font-medium text-surface-800 dark:text-gray-200 dark:text-gray-200">Current session</p>
+                <p className="text-sm font-medium text-surface-800 dark:text-gray-200">Current session</p>
                 <p className="text-xs text-surface-400 dark:text-gray-500 mt-0.5">This browser · Active now</p>
               </div>
               <span className="badge badge-green">Active</span>

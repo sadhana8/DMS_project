@@ -6,11 +6,11 @@ import Modal from './Modal'
 export function EmptyState({ icon: Icon, title, description, action }) {
   return (
     <div className="flex flex-col items-center justify-center py-16 text-center">
-      {Icon && <div className="w-14 h-14 rounded-2xl bg-surface-100 flex items-center justify-center mb-4">
-        <Icon className="w-7 h-7 text-surface-400" />
+      {Icon && <div className="w-14 h-14 rounded-2xl bg-surface-100 dark:bg-gray-800 flex items-center justify-center mb-4">
+        <Icon className="w-7 h-7 text-surface-400 dark:text-gray-500" />
       </div>}
-      <h3 className="text-base font-semibold text-surface-700 mb-1">{title}</h3>
-      {description && <p className="text-sm text-surface-400 max-w-xs mb-5">{description}</p>}
+      <h3 className="text-base font-semibold text-surface-700 dark:text-gray-300 mb-1">{title}</h3>
+      {description && <p className="text-sm text-surface-400 dark:text-gray-500 max-w-xs mb-5">{description}</p>}
       {action}
     </div>
   )
@@ -34,7 +34,7 @@ export function Pagination({ page, totalPages, onChange }) {
       {pages.map((p, i) => (
         <button key={i} onClick={() => typeof p === 'number' && onChange(p)}
           className={clsx('w-9 h-9 rounded-lg text-sm font-medium transition-colors',
-            p === page ? 'bg-primary-600 text-white' : 'hover:bg-surface-100 text-surface-600')}>
+            p === page ? 'bg-primary-600 text-white' : 'hover:bg-surface-100 dark:hover:bg-gray-800 text-surface-600 dark:text-gray-400')}>
           {p}
         </button>
       ))}
@@ -70,7 +70,7 @@ export function Avatar({ user, size = 'md' }) {
     return <img src={user.profilePicture} alt="" className={clsx('rounded-full object-cover', sizes[size])} />
   }
   return (
-    <div className={clsx('rounded-full bg-primary-100 text-primary-700 font-semibold flex items-center justify-center flex-shrink-0', sizes[size])}>
+    <div className={clsx('rounded-full bg-primary-100 dark:bg-primary-900/40 text-primary-700 dark:text-primary-400 font-semibold flex items-center justify-center flex-shrink-0', sizes[size])}>
       {user?.firstName?.[0]}{user?.lastName?.[0]}
     </div>
   )

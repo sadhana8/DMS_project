@@ -283,7 +283,7 @@ function CompanyProfileModal({ open, onClose, settings, onSaved }) {
               value={form.company_phone}
               onChange={e => setForm(p => ({...p, company_phone: e.target.value}))}
               className="input"
-              placeholder="+977- 9800000000"
+              placeholder="+1 (555) 000-0000"
             />
           </div>
         </div>
