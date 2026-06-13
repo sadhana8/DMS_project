@@ -26,17 +26,17 @@ import java.util.stream.Collectors;
 @Slf4j
 public class AuthServiceImpl {
 
-    private final UserRepository          userRepository;
-    private final RoleRepository          roleRepository;
-    private final AppTokenRepository      appTokenRepository;
-    private final PasswordEncoder         passwordEncoder;
-    private final JwtUtil                 jwtUtil;
-    private final AuthenticationManager   authManager;
+    private final UserRepository userRepository;
+    private final RoleRepository roleRepository;
+    private final AppTokenRepository appTokenRepository;
+    private final PasswordEncoder passwordEncoder;
+    private final JwtUtil jwtUtil;
+    private final AuthenticationManager authManager;
     private final CustomUserDetailsService userDetailsService;
-    private final EmailService            emailService;
-    private final SettingsService         settingsService;
-    private final UserApprovalRepository  approvalRepository;
-    private final NotificationService     notificationService;
+    private final EmailService emailService;
+    private final SettingsService settingsService;
+    private final UserApprovalRepository approvalRepository;
+    private final NotificationService notificationService;
 
     @Value("${app.password-reset.expiry-minutes}")
     private int resetExpiryMinutes;
@@ -67,7 +67,7 @@ public class AuthServiceImpl {
         userRepository.save(user);
 
         UserDetails userDetails = userDetailsService.loadUserByUsername(user.getEmail());
-        String accessToken  = jwtUtil.generateToken(userDetails);
+        String accessToken = jwtUtil.generateToken(userDetails);
         String refreshToken = createRefreshToken(user);
 
         AuthResponse resp = buildAuthResponse(accessToken, refreshToken, user);
@@ -112,8 +112,8 @@ public class AuthServiceImpl {
                 .orElseThrow(() -> new ResourceNotFoundException("Default role not found"));
 
         boolean approvalRequired = settingsService.getBool("require_admin_approval");
-        boolean autoApproved     = approvalRequired && matchesAutoApproveDomain(request.getEmail());
-        boolean pending          = approvalRequired && !autoApproved;
+        boolean autoApproved = approvalRequired && matchesAutoApproveDomain(request.getEmail());
+        boolean pending = approvalRequired && !autoApproved;
 
         User user = User.builder()
                 .username(request.getUsername())
@@ -135,32 +135,43 @@ public class AuthServiceImpl {
                     Notification.NotificationType.PENDING_APPROVAL,
                     "New registration pending review",
                     user.getFirstName() + " " + user.getLastName()
-                            + " (" + user.getEmail() + ") is awaiting approval.",
+                    + " (" + user.getEmail() + ") is awaiting approval.",
                     "/approvals"
             );
             log.info("Registration pending approval: {}", user.getEmail());
             return ApiResponse.ok("Registration received. An administrator will review your account.");
         }
 
-        if (autoApproved) log.info("Registration auto-approved by domain rule: {}", user.getEmail());
-        try { emailService.sendWelcomeEmail(user); }
-        catch (Exception e) { log.warn("Welcome email failed: {}", e.getMessage()); }
+        if (autoApproved) {
+            log.info("Registration auto-approved by domain rule: {}", user.getEmail());
+        }
+        try {
+            emailService.sendWelcomeEmail(user);
+        } catch (Exception e) {
+            log.warn("Welcome email failed: {}", e.getMessage());
+        }
 
         UserDetails userDetails = userDetailsService.loadUserByUsername(user.getEmail());
-        String accessToken  = jwtUtil.generateToken(userDetails);
+        String accessToken = jwtUtil.generateToken(userDetails);
         String refreshToken = createRefreshToken(user);
         return buildAuthResponse(accessToken, refreshToken, user);
     }
 
     private boolean matchesAutoApproveDomain(String email) {
         String raw = settingsService.get("auto_approve_domains");
-        if (raw == null || raw.isBlank() || email == null) return false;
+        if (raw == null || raw.isBlank() || email == null) {
+            return false;
+        }
         int at = email.lastIndexOf('@');
-        if (at < 0 || at == email.length() - 1) return false;
+        if (at < 0 || at == email.length() - 1) {
+            return false;
+        }
         String emailDomain = email.substring(at + 1).toLowerCase().trim();
         for (String d : raw.split(",")) {
             String allowed = d.trim().toLowerCase();
-            if (!allowed.isEmpty() && allowed.equals(emailDomain)) return true;
+            if (!allowed.isEmpty() && allowed.equals(emailDomain)) {
+                return true;
+            }
         }
         return false;
     }
@@ -171,8 +182,9 @@ public class AuthServiceImpl {
         AppToken stored = appTokenRepository
                 .findByTokenValueAndTokenType(tokenStr, AppToken.TokenType.REFRESH)
                 .orElseThrow(() -> new InvalidTokenException("Refresh token not found"));
-        if (!stored.isValid())
+        if (!stored.isValid()) {
             throw new InvalidTokenException("Refresh token expired or revoked");
+        }
         stored.setIsRevoked(true);
         appTokenRepository.save(stored);
         UserDetails ud = userDetailsService.loadUserByUsername(stored.getUser().getEmail());
@@ -203,16 +215,25 @@ public class AuthServiceImpl {
                 .expiresAt(LocalDateTime.now().plusMinutes(resetExpiryMinutes))
                 .build());
 
-        try { emailService.sendPasswordResetEmail(user, token); }
-        catch (Exception e) { log.warn("Password reset email failed: {}", e.getMessage()); }
+        try {
+            emailService.sendPasswordResetEmail(user, token);
+        } catch (Exception e) {
+            log.warn("Password reset email failed: {}", e.getMessage());
+        }
     }
 
     private boolean domainCanReceiveMail(String email) {
-        if (email == null) return false;
+        if (email == null) {
+            return false;
+        }
         int at = email.lastIndexOf('@');
-        if (at < 0 || at == email.length() - 1) return false;
+        if (at < 0 || at == email.length() - 1) {
+            return false;
+        }
         String domain = email.substring(at + 1).trim();
-        if (domain.isEmpty() || domain.contains(" ")) return false;
+        if (domain.isEmpty() || domain.contains(" ")) {
+            return false;
+        }
         javax.naming.directory.DirContext ctx = null;
         try {
             java.util.Hashtable<String, String> env = new java.util.Hashtable<>();
@@ -221,26 +242,38 @@ public class AuthServiceImpl {
             env.put("com.sun.jndi.dns.timeout.retries", "1");
             ctx = new javax.naming.directory.InitialDirContext(env);
             try {
-                javax.naming.directory.Attributes attrs =
-                        ctx.getAttributes(domain, new String[]{"MX"});
-                if (attrs.get("MX") != null && attrs.get("MX").size() > 0) return true;
+                javax.naming.directory.Attributes attrs
+                        = ctx.getAttributes(domain, new String[]{"MX"});
+                if (attrs.get("MX") != null && attrs.get("MX").size() > 0) {
+                    return true;
+                }
             } catch (javax.naming.NameNotFoundException e) {
-                log.info("Email domain rejected (NXDOMAIN): {}", domain); return false;
-            } catch (javax.naming.NamingException ignored) {}
+                log.info("Email domain rejected (NXDOMAIN): {}", domain);
+                return false;
+            } catch (javax.naming.NamingException ignored) {
+            }
             try {
-                javax.naming.directory.Attributes attrs =
-                        ctx.getAttributes(domain, new String[]{"A", "AAAA"});
-                boolean hasA    = attrs.get("A")    != null && attrs.get("A").size()    > 0;
+                javax.naming.directory.Attributes attrs
+                        = ctx.getAttributes(domain, new String[]{"A", "AAAA"});
+                boolean hasA = attrs.get("A") != null && attrs.get("A").size() > 0;
                 boolean hasAAAA = attrs.get("AAAA") != null && attrs.get("AAAA").size() > 0;
-                if (hasA || hasAAAA) return true;
-                log.info("Email domain rejected (no MX/A/AAAA): {}", domain); return false;
+                if (hasA || hasAAAA) {
+                    return true;
+                }
+                log.info("Email domain rejected (no MX/A/AAAA): {}", domain);
+                return false;
             } catch (javax.naming.NameNotFoundException e) {
-                log.info("Email domain rejected (NXDOMAIN): {}", domain); return false;
+                log.info("Email domain rejected (NXDOMAIN): {}", domain);
+                return false;
             }
         } catch (Exception e) {
-            log.warn("DNS infrastructure error checking {}: {}", domain, e.getMessage()); return true;
+            log.warn("DNS infrastructure error checking {}: {}", domain, e.getMessage());
+            return true;
         } finally {
-            if (ctx != null) try { ctx.close(); } catch (Exception ignored) {}
+            if (ctx != null) try {
+                ctx.close();
+            } catch (Exception ignored) {
+            }
         }
     }
 
@@ -249,8 +282,9 @@ public class AuthServiceImpl {
         AppToken token = appTokenRepository
                 .findByTokenValueAndTokenType(request.getToken(), AppToken.TokenType.PASSWORD_RESET)
                 .orElseThrow(() -> new InvalidTokenException("Invalid reset token"));
-        if (!token.isValid())
+        if (!token.isValid()) {
             throw new InvalidTokenException("Reset token has expired or already been used");
+        }
         User user = token.getUser();
         user.setPassword(passwordEncoder.encode(request.getNewPassword()));
         userRepository.save(user);
@@ -264,8 +298,9 @@ public class AuthServiceImpl {
     public void changePassword(String userEmail, ChangePasswordRequest request) {
         User user = userRepository.findByEmail(userEmail)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
-        if (!passwordEncoder.matches(request.getCurrentPassword(), user.getPassword()))
+        if (!passwordEncoder.matches(request.getCurrentPassword(), user.getPassword())) {
             throw new BadCredentialsException("Current password is incorrect");
+        }
         user.setPassword(passwordEncoder.encode(request.getNewPassword()));
         userRepository.save(user);
         appTokenRepository.revokeAllRefreshTokensForUser(user);
@@ -296,9 +331,14 @@ public class AuthServiceImpl {
     }
 
     private com.dms.entity.Department parseDepartmentForRegister(String s) {
-        if (s == null || s.isBlank()) return com.dms.entity.Department.OTHER;
-        try { return com.dms.entity.Department.valueOf(s.trim().toUpperCase()); }
-        catch (Exception e) { return com.dms.entity.Department.OTHER; }
+        if (s == null || s.isBlank()) {
+            return com.dms.entity.Department.OTHER;
+        }
+        try {
+            return com.dms.entity.Department.valueOf(s.trim().toUpperCase());
+        } catch (Exception e) {
+            return com.dms.entity.Department.OTHER;
+        }
     }
 
     public UserResponse mapUserToResponse(User user) {
